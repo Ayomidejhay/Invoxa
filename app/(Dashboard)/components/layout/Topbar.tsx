@@ -31,7 +31,7 @@ export default function Topbar({ user }: { user: User }) {
         </span>
         <button
           onClick={handleLogout}
-          className="px-4 py-2 bg-deepgreen text-white rounded-lg hover:bg-green"
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green"
         >
           Logout
         </button>

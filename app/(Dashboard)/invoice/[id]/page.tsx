@@ -1,150 +1,190 @@
-'use client'
+"use client";
 
-import { useEffect, useMemo, useState } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
-import { useParams } from 'next/navigation'
+import { useEffect, useMemo, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
+import { useParams } from "next/navigation";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 // ---------------- TYPES ----------------
-type Customer = { name: string; email?: string; phone?: string }
+type Customer = { name: string; email?: string; phone?: string };
 
 type Organization = {
-  name?: string
-  email?: string
-  phone?: string
-  address?: string
-  logo_url?: string | null
-  payment_terms?: string | null
-  bank_name?: string | null
-  account_name?: string | null
-  account_number?: string | null
-}
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  logo_url?: string | null;
+  payment_terms?: string | null;
+  bank_name?: string | null;
+  account_name?: string | null;
+  account_number?: string | null;
+};
 
 type Invoice = {
-  id: string
-  invoice_number?: string | null
-  type: 'sale' | 'rental'
-  status: 'draft' | 'sent' | 'paid'
-  total: number
-  created_at: string
-  issue_date?: string | null
-  due_date?: string | null
-  customers?: Customer
-  start_date?: string | null
-  end_date?: string | null
-}
+  id: string;
+  invoice_number?: string | null;
+  type: "sale" | "rental";
+  status: "draft" | "sent" | "paid";
+  total: number;
+  created_at: string;
+  issue_date?: string | null;
+  due_date?: string | null;
+  customers?: Customer;
+  start_date?: string | null;
+  end_date?: string | null;
+};
 
 type InvoiceItem = {
-  id: string
-  name?: string | null
-  product_id: string
-  quantity: number
-  unit_price: number
-  total_price: number
-  start_date?: string | null
-  end_date?: string | null
-}
+  id: string;
+  name?: string | null;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  start_date?: string | null;
+  end_date?: string | null;
+};
 
 // -------------- HELPERS ---------------
 const daysBetween = (start?: string | null, end?: string | null) => {
-  if (!start || !end) return 0
-  const diff = new Date(end).getTime() - new Date(start).getTime()
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
-}
+  if (!start || !end) return 0;
+  const diff = new Date(end).getTime() - new Date(start).getTime();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+};
 
 export default function InvoiceDetailPage() {
-  const { id } = useParams() as { id: string }
+  const { id } = useParams() as { id: string };
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
-  const [invoice, setInvoice] = useState<Invoice | null>(null)
-  const [items, setItems] = useState<InvoiceItem[]>([])
-  const [org, setOrg] = useState<Organization | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [paying, setPaying] = useState(false)
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [items, setItems] = useState<InvoiceItem[]>([]);
+  const [org, setOrg] = useState<Organization | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted = true;
 
     const load = async () => {
       const { data: inv } = await supabase
-        .from('invoices')
-        .select('*, customers(name, email, phone)')
-        .eq('id', id)
-        .single()
+        .from("invoices")
+        .select("*, customers(name, email, phone)")
+        .eq("id", id)
+        .single();
 
       const { data: itemData } = await supabase
-        .from('invoice_items')
-        .select('*')
-        .eq('invoice_id', id)
-        .order('created_at', { ascending: true })
+        .from("invoice_items")
+        .select("*")
+        .eq("invoice_id", id)
+        .order("created_at", { ascending: true });
 
       const {
         data: { user },
-      } = await supabase.auth.getUser()
+      } = await supabase.auth.getUser();
 
       const { data: profile } = await supabase
-        .from('profiles')
-        .select('organization_id')
-        .eq('id', user?.id)
-        .single()
+        .from("profiles")
+        .select("organization_id")
+        .eq("id", user?.id)
+        .single();
 
       const { data: organization } = await supabase
-        .from('organizations')
-        .select('name, email, phone, address, logo_url, payment_terms, bank_name, account_name, account_number')
-        .eq('id', profile?.organization_id)
-        .single()
+        .from("organizations")
+        .select(
+          "name, email, phone, address, logo_url, payment_terms, bank_name, account_name, account_number",
+        )
+        .eq("id", profile?.organization_id)
+        .single();
 
       if (isMounted) {
-        setInvoice(inv)
-        setItems(itemData || [])
-        setOrg(organization)
-        setLoading(false)
+        setInvoice(inv);
+        setItems(itemData || []);
+        setOrg(organization);
+        setLoading(false);
       }
-    }
+    };
 
-    if (id) load()
+    if (id) load();
 
     return () => {
-      isMounted = false
-    }
-  }, [id])
+      isMounted = false;
+    };
+  }, [id]);
 
   const grandTotal = useMemo(() => {
-    return items.reduce((s, it) => s + (it.total_price || 0), 0)
-  }, [items])
+    return items.reduce((s, it) => s + (it.total_price || 0), 0);
+  }, [items]);
 
   const markAsPaid = async () => {
-    if (!invoice || invoice.status === 'paid') return
-    setPaying(true)
+    if (!invoice || invoice.status === "paid") return;
+    setPaying(true);
 
     await supabase
-      .from('invoices')
-      .update({ status: 'paid' })
-      .eq('id', invoice.id)
+      .from("invoices")
+      .update({ status: "paid" })
+      .eq("id", invoice.id);
 
     // Stock deduction ONLY for sales
-    if (invoice.type === 'sale') {
+    if (invoice.type === "sale") {
       for (const it of items) {
-        await supabase.rpc('decrease_stock', {
+        await supabase.rpc("decrease_stock", {
           product_id: it.product_id,
           qty: it.quantity,
-        })
+        });
       }
     }
 
-    setPaying(false)
-    location.reload()
-  }
+    setPaying(false);
+    location.reload();
+  };
 
-  if (loading || !invoice) return <p>Loading...</p>
+  if (loading || !invoice) return <p>Loading...</p>;
 
-  const isRental = invoice.type === 'rental'
+  const isRental = invoice.type === "rental";
+
+  // const downloadPDF = async () => {
+  //   const element = document.getElementById("invoice");
+
+  //   if (!element) return;
+
+  //   const canvas = await html2canvas(element, {
+  //     scale: 2, // high quality
+  //   });
+
+  //   const imgData = canvas.toDataURL("image/png");
+
+  //   const pdf = new jsPDF("p", "mm", "a4");
+
+  //   const imgWidth = 210;
+  //   const pageHeight = 295;
+  //   const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+  //   let heightLeft = imgHeight;
+  //   let position = 0;
+
+  //   pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+  //   heightLeft -= pageHeight;
+
+  //   while (heightLeft > 0) {
+  //     position = heightLeft - imgHeight;
+  //     pdf.addPage();
+  //     pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+  //     heightLeft -= pageHeight;
+  //   }
+
+  //   pdf.save(`invoice-${invoice.invoice_number || invoice.id}.pdf`);
+  // };
 
   return (
-    <div className="bg-white max-w-4xl mx-auto p-10 space-y-8 print:p-6">
+    <div
+      id="invoice"
+      className="bg-white max-w-4xl mx-auto p-10 space-y-8 print:p-6"
+    >
       {/* Header */}
       <div className="flex justify-between items-start">
         <div className="flex items-center gap-3">
@@ -153,7 +193,9 @@ export default function InvoiceDetailPage() {
             <img src={org.logo_url} alt="logo" className="h-20 w-auto" />
           )}
           <div>
-            <h1 className="text-2xl font-bold">{org?.name || 'Business Name'}</h1>
+            <h1 className="text-2xl font-bold">
+              {org?.name || "Business Name"}
+            </h1>
             <p className="text-sm text-gray-600">{org?.email}</p>
             <p className="text-sm text-gray-600">{org?.phone}</p>
             <p className="text-sm text-gray-600">{org?.address}</p>
@@ -162,25 +204,39 @@ export default function InvoiceDetailPage() {
 
         <div className="text-right">
           <h2 className="text-xl font-semibold">INVOICE</h2>
-          <p className="text-sm">#{invoice.invoice_number || invoice.id.slice(0, 8)}</p>
-          <p className="text-sm mt-1">Invoice Type: <span className="capitalize">{invoice.type}</span></p>
+          <p className="text-sm">
+            #{invoice.invoice_number || invoice.id.slice(0, 8)}
+          </p>
+          <p className="text-sm mt-1">
+            Invoice Type: <span className="capitalize">{invoice.type}</span>
+          </p>
           {invoice.issue_date && (
-            <p className="text-sm">Issue: {new Date(invoice.issue_date).toLocaleDateString()}</p>
+            <p className="text-sm">
+              Issue: {new Date(invoice.issue_date).toLocaleDateString()}
+            </p>
           )}
           {invoice.due_date && (
-            <p className="text-sm">Due: {new Date(invoice.due_date).toLocaleDateString()}</p>
+            <p className="text-sm">
+              Due: {new Date(invoice.due_date).toLocaleDateString()}
+            </p>
           )}
-           {isRental && (
-                    <p className="text-sm">Start Date: 
-                      {invoice.start_date ? new Date(invoice.start_date).toLocaleDateString() : '-'}
-                    </p>
-                  )}
-                  {isRental && (
-                    <p className="text-sm">End Date:
-                      {invoice.end_date ? new Date(invoice.end_date).toLocaleDateString() : '-'}
-                    </p>
-                  )}
-                  {/* {isRental && (
+          {isRental && (
+            <p className="text-sm">
+              Start Date:
+              {invoice.start_date
+                ? new Date(invoice.start_date).toLocaleDateString()
+                : "-"}
+            </p>
+          )}
+          {isRental && (
+            <p className="text-sm">
+              End Date:
+              {invoice.end_date
+                ? new Date(invoice.end_date).toLocaleDateString()
+                : "-"}
+            </p>
+          )}
+          {/* {isRental && (
                     <p className="p-3 text-center">{days || '-'}</p>
                   )} */}
         </div>
@@ -190,8 +246,12 @@ export default function InvoiceDetailPage() {
       <div>
         <h3 className="font-semibold mb-1">Bill To</h3>
         <p>{invoice.customers?.name}</p>
-        {invoice.customers?.email && <p className="text-sm text-gray-600">{invoice.customers.email}</p>}
-        {invoice.customers?.phone && <p className="text-sm text-gray-600">{invoice.customers.phone}</p>}
+        {invoice.customers?.email && (
+          <p className="text-sm text-gray-600">{invoice.customers.email}</p>
+        )}
+        {invoice.customers?.phone && (
+          <p className="text-sm text-gray-600">{invoice.customers.phone}</p>
+        )}
       </div>
 
       {/* Items */}
@@ -210,16 +270,19 @@ export default function InvoiceDetailPage() {
           </thead>
           <tbody>
             {items.map((it) => {
-              const days = daysBetween(it.start_date || undefined, it.end_date || undefined)
+              const days = daysBetween(
+                it.start_date || undefined,
+                it.end_date || undefined,
+              );
               return (
                 <tr key={it.id} className="border-t">
-                  <td className="p-3">{it.name || 'Product'}</td>
-                 
+                  <td className="p-3">{it.name || "Product"}</td>
+
                   <td className="p-3 text-center">{it.quantity}</td>
                   <td className="p-3 text-center">₦{it.unit_price}</td>
                   <td className="p-3 text-center">₦{it.total_price}</td>
                 </tr>
-              )
+              );
             })}
           </tbody>
         </table>
@@ -253,12 +316,14 @@ export default function InvoiceDetailPage() {
       {org?.payment_terms && (
         <div className="border-t pt-4">
           <h4 className="font-semibold mb-2">Terms</h4>
-          <p className="text-sm text-gray-700 whitespace-pre-line">{org.payment_terms}</p>
+          <p className="text-sm text-gray-700 whitespace-pre-line">
+            {org.payment_terms}
+          </p>
         </div>
       )}
 
       {/* Actions (hidden on print) */}
-      {invoice.status !== 'paid' && (
+      {invoice.status !== "paid" && (
         <div className="flex justify-end gap-3 print:hidden">
           <button
             onClick={() => window.print()}
@@ -272,18 +337,25 @@ export default function InvoiceDetailPage() {
             disabled={paying}
             className="bg-green-600 text-white px-6 py-2 rounded-lg"
           >
-            {paying ? 'Processing...' : 'Mark as Paid'}
+            {paying ? "Processing..." : "Mark as Paid"}
           </button>
+          {/* <button onClick={downloadPDF} className="px-4 py-2 border rounded-lg">
+            Download PDF
+          </button> */}
         </div>
       )}
 
       {/* Print tweaks */}
       <style jsx global>{`
         @media print {
-          body { background: #fff; }
-          .print\:hidden { display: none !important; }
+          body {
+            background: #fff;
+          }
+          .print\:hidden {
+            display: none !important;
+          }
         }
       `}</style>
     </div>
-  )
+  );
 }
