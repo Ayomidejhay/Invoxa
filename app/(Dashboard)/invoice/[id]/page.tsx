@@ -1,488 +1,3 @@
-
-// "use client";
-
-// import { useEffect, useMemo, useState } from "react";
-// import { useParams } from "next/navigation";
-// import html2canvas from "html2canvas-pro";
-// import jsPDF from "jspdf";
-// import { getSupabaseClient } from "@/lib/supabase/client";
-// import { useOrganization } from "../../components/OrganizationProvider";
-// import type { InvoiceStatus, InvoiceType } from "@/lib/supabase/database.types";
-
-// // ---------------- TYPES ----------------
-// type Customer = { name: string; email?: string; phone?: string };
-
-// type Invoice = {
-//   id: string;
-//   invoice_number?: string | null;
-//   type: InvoiceType;
-//   status: InvoiceStatus;
-//   total: number;
-//   notes?: string | null;
-//   created_at: string;
-//   issue_date?: string | null;
-//   due_date?: string | null;
-//   customers?: Customer;
-//   start_date?: string | null;
-//   end_date?: string | null;
-// };
-
-// type InvoiceItem = {
-//   id: string;
-//   name?: string | null;
-//   product_id: string | null;
-//   quantity: number;
-//   unit_price: number;
-//   total_price: number;
-//   start_date?: string | null;
-//   end_date?: string | null;
-// };
-
-// const STATUS_STYLES: Record<InvoiceStatus, string> = {
-//   draft: "bg-gray-100 text-gray-600",
-//   sent: "bg-blue-100 text-blue-700",
-//   paid: "bg-green-100 text-green-700",
-//   overdue: "bg-amber-100 text-amber-700",
-//   void: "bg-red-100 text-red-700",
-// };
-
-// // -------------- HELPERS ---------------
-// const daysBetween = (start?: string | null, end?: string | null) => {
-//   if (!start || !end) return 0;
-//   const diff = new Date(end).getTime() - new Date(start).getTime();
-//   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-// };
-
-// export default function InvoiceDetailPage() {
-//   const { id } = useParams() as { id: string };
-//   const supabase = useMemo(() => getSupabaseClient(), []);
-//   const { organization: org, isOwnerOrAdmin } = useOrganization();
-
-//   const [invoice, setInvoice] = useState<Invoice | null>(null);
-//   const [items, setItems] = useState<InvoiceItem[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const [actionError, setActionError] = useState<string | null>(null);
-//   const [paying, setPaying] = useState(false);
-//   const [voiding, setVoiding] = useState(false);
-
-//   useEffect(() => {
-//     let isMounted = true;
-
-//     const load = async () => {
-//       const { data: inv } = await supabase
-//         .from("invoices")
-//         .select("*, customers(name, email, phone)")
-//         .eq("id", id)
-//         .single();
-
-//       const { data: itemData } = await supabase
-//         .from("invoice_items")
-//         .select("*")
-//         .eq("invoice_id", id)
-//         .order("created_at", { ascending: true });
-
-//       if (isMounted) {
-//         setInvoice(inv);
-//         setItems(itemData || []);
-//         setLoading(false);
-//       }
-//     };
-
-//     if (id) load();
-
-//     return () => {
-//       isMounted = false;
-//     };
-//   }, [id, supabase]);
-
-//   const grandTotal = useMemo(() => {
-//     return items.reduce((s, it) => s + (it.total_price || 0), 0);
-//   }, [items]);
-
-//   const markAsPaid = async () => {
-//     if (!invoice || invoice.status === "paid") return;
-//     setActionError(null);
-//     setPaying(true);
-
-//     // Single atomic RPC: flips status to paid AND decrements stock (for
-//     // sales) under a row lock — no more client-side loop of separate
-//     // decrease_stock calls that could partially fail.
-//     const { error } = await supabase.rpc("mark_invoice_paid", { p_invoice_id: invoice.id });
-
-//     setPaying(false);
-
-//     if (error) {
-//       setActionError(error.message);
-//       return;
-//     }
-//     setInvoice({ ...invoice, status: "paid" });
-//   };
-
-//   const voidInvoice = async () => {
-//     if (!invoice || invoice.status === "void") return;
-//     if (!confirm("Void this invoice? If it was already paid, stock will be restored.")) return;
-
-//     setActionError(null);
-//     setVoiding(true);
-
-//     const { error } = await supabase.rpc("void_invoice", { p_invoice_id: invoice.id });
-
-//     setVoiding(false);
-
-//     if (error) {
-//       setActionError(error.message);
-//       return;
-//     }
-//     setInvoice({ ...invoice, status: "void" });
-//   };
-
-//   if (loading || !invoice) return <p>Loading...</p>;
-
-//   const isRental = invoice.type === "rental";
-
-//   const downloadPDF = async () => {
-//     const element = document.getElementById("invoice");
-
-//     if (!element) return;
-
-//     // Save original style properties to restore later
-//     const originalWidth = element.style.width;
-//     const originalMaxWidth = element.style.maxWidth;
-//     const originalPadding = element.style.padding;
-
-//     // Temporarily force fixed width for clean A4 printing layout
-//     element.style.width = "850px";
-//     element.style.maxWidth = "none";
-//     element.style.padding = "48px";
-
-//     try {
-//       const canvas = await html2canvas(element, {
-//         scale: 2, // high quality
-//         useCORS: true,
-//         logging: false,
-//       });
-
-//       const imgData = canvas.toDataURL("image/png");
-
-//       const pdf = new jsPDF("p", "mm", "a4");
-
-//       const imgWidth = 210;
-//       const pageHeight = 295;
-//       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-//       let heightLeft = imgHeight;
-//       let position = 0;
-
-//       pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-//       heightLeft -= pageHeight;
-
-//       while (heightLeft > 0) {
-//         position = heightLeft - imgHeight;
-//         pdf.addPage();
-//         pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-//         heightLeft -= pageHeight;
-//       }
-
-//       pdf.save(`invoice-${invoice.invoice_number || invoice.id.slice(0, 8)}.pdf`);
-//     } catch (err) {
-//       console.error("Failed to generate PDF", err);
-//     } finally {
-//       // Restore original styling
-//       element.style.width = originalWidth;
-//       element.style.maxWidth = originalMaxWidth;
-//       element.style.padding = originalPadding;
-//     }
-//   };
-
-//   return (
-//     <div className="max-w-4xl mx-auto pb-12 space-y-6">
-//       {/* Printable Invoice Container */}
-//       <div
-//         id="invoice"
-//         className="bg-white p-12 space-y-10 border border-slate-200/60 rounded-2xl shadow-md"
-//       >
-//         {/* Header */}
-//         <div className="flex justify-between items-start border-b border-slate-100 pb-8">
-//           <div className="flex items-center gap-4">
-//             {org?.logo_url ? (
-//               // eslint-disable-next-line @next/next/no-img-element
-//               <img
-//                 src={org.logo_url}
-//                 alt="logo"
-//                 className="h-16 w-16 object-cover rounded-xl border border-slate-200 shadow-sm"
-//               />
-//             ) : (
-//               <div className="w-14 h-14 rounded-xl bg-slate-900 flex items-center justify-center text-white font-bold text-xl uppercase tracking-wider">
-//                 {org?.name ? org.name[0] : "B"}
-//               </div>
-//             )}
-//             <div>
-//               <h1 className="text-xl font-bold text-slate-900">
-//                 {org?.name || "Business Name"}
-//               </h1>
-//               <p className="text-sm text-slate-500">{org?.email}</p>
-//               <p className="text-sm text-slate-500">{org?.phone}</p>
-//               <p className="text-xs text-slate-400 mt-1">{org?.address}</p>
-//             </div>
-//           </div>
-
-//           <div className="text-right">
-//             <div className="flex items-center justify-end gap-2 mb-2">
-//               <span className="inline-block bg-slate-100 text-slate-700 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md">
-//                 {invoice.type === "rental" ? "Rental Invoice" : "Sales Invoice"}
-//               </span>
-//               <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md ${STATUS_STYLES[invoice.status]}`}>
-//                 {invoice.status}
-//               </span>
-//             </div>
-//             <h2 className="text-3xl font-light text-slate-800 tracking-tight">INVOICE</h2>
-//             <p className="text-sm font-mono text-slate-500 mt-0.5">
-//               #{invoice.invoice_number || invoice.id.slice(0, 8)}
-//             </p>
-//           </div>
-//         </div>
-
-//         {/* Invoice Info / Dates */}
-//         <div className="grid grid-cols-2 gap-12 text-sm pt-4">
-//           <div className="space-y-1.5">
-//             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Billed To</h3>
-//             <p className="font-bold text-slate-800 text-base">{invoice.customers?.name}</p>
-//             {invoice.customers?.email && (
-//               <p className="text-slate-500">{invoice.customers.email}</p>
-//             )}
-//             {invoice.customers?.phone && (
-//               <p className="text-slate-500">{invoice.customers.phone}</p>
-//             )}
-//           </div>
-
-//           <div className="flex flex-col items-end text-right space-y-1.5 text-slate-600">
-//             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Details</h3>
-//             {invoice.issue_date && (
-//               <p>
-//                 <span className="text-slate-400">Date Issued:</span>{" "}
-//                 <span className="font-medium text-slate-800">
-//                   {new Date(invoice.issue_date).toLocaleDateString("en-US", {
-//                     year: "numeric",
-//                     month: "long",
-//                     day: "numeric",
-//                   })}
-//                 </span>
-//               </p>
-//             )}
-//             {invoice.due_date && (
-//               <p>
-//                 <span className="text-slate-400">Due Date:</span>{" "}
-//                 <span className="font-medium text-slate-800">
-//                   {new Date(invoice.due_date).toLocaleDateString("en-US", {
-//                     year: "numeric",
-//                     month: "long",
-//                     day: "numeric",
-//                   })}
-//                 </span>
-//               </p>
-//             )}
-//             {isRental && invoice.start_date && (
-//               <p>
-//                 <span className="text-slate-400">Rental Start:</span>{" "}
-//                 <span className="font-medium text-slate-800">
-//                   {new Date(invoice.start_date).toLocaleDateString("en-US", {
-//                     year: "numeric",
-//                     month: "long",
-//                     day: "numeric",
-//                   })}
-//                 </span>
-//               </p>
-//             )}
-//             {isRental && invoice.end_date && (
-//               <p>
-//                 <span className="text-slate-400">Rental End:</span>{" "}
-//                 <span className="font-medium text-slate-800">
-//                   {new Date(invoice.end_date).toLocaleDateString("en-US", {
-//                     year: "numeric",
-//                     month: "long",
-//                     day: "numeric",
-//                   })}
-//                 </span>
-//               </p>
-//             )}
-//           </div>
-//         </div>
-
-//         {/* Table of Items */}
-//         <div className="pt-6">
-//           <table className="w-full text-sm">
-//             <thead>
-//               <tr className="border-y border-slate-200 bg-slate-50/50">
-//                 <th className="p-3 text-left font-bold text-slate-500 text-xs uppercase tracking-wider">Description</th>
-//                 {isRental && <th className="p-3 text-center font-bold text-slate-500 text-xs uppercase tracking-wider">Start</th>}
-//                 {isRental && <th className="p-3 text-center font-bold text-slate-500 text-xs uppercase tracking-wider">End</th>}
-//                 {isRental && <th className="p-3 text-center font-bold text-slate-500 text-xs uppercase tracking-wider">Days</th>}
-//                 <th className="p-3 text-center font-bold text-slate-500 text-xs uppercase tracking-wider">Qty</th>
-//                 <th className="p-3 text-right font-bold text-slate-500 text-xs uppercase tracking-wider">Unit Price</th>
-//                 <th className="p-3 text-right font-bold text-slate-500 text-xs uppercase tracking-wider">Amount</th>
-//               </tr>
-//             </thead>
-//             <tbody className="divide-y divide-slate-100">
-//               {items.map((it) => {
-//                 const days = daysBetween(
-//                   it.start_date || invoice.start_date || undefined,
-//                   it.end_date || invoice.end_date || undefined,
-//                 );
-//                 return (
-//                   <tr key={it.id} className="text-slate-700">
-//                     <td className="p-3 font-medium text-slate-900">{it.name || "Product"}</td>
-//                     {isRental && (
-//                       <td className="p-3 text-center text-slate-500 whitespace-nowrap">
-//                         {it.start_date || invoice.start_date
-//                           ? new Date(it.start_date || invoice.start_date!).toLocaleDateString("en-US", {
-//                               month: "short",
-//                               day: "numeric",
-//                               year: "numeric",
-//                             })
-//                           : "-"}
-//                       </td>
-//                     )}
-//                     {isRental && (
-//                       <td className="p-3 text-center text-slate-500 whitespace-nowrap">
-//                         {it.end_date || invoice.end_date
-//                           ? new Date(it.end_date || invoice.end_date!).toLocaleDateString("en-US", {
-//                               month: "short",
-//                               day: "numeric",
-//                               year: "numeric",
-//                             })
-//                           : "-"}
-//                       </td>
-//                     )}
-//                     {isRental && <td className="p-3 text-center text-slate-500 font-mono">{days || "-"}</td>}
-//                     <td className="p-3 text-center text-slate-500 font-mono">{it.quantity}</td>
-//                     <td className="p-3 text-right text-slate-500 font-mono">₦{it.unit_price.toLocaleString()}</td>
-//                     <td className="p-3 text-right font-semibold text-slate-950 font-mono">₦{it.total_price.toLocaleString()}</td>
-//                   </tr>
-//                 );
-//               })}
-//             </tbody>
-//           </table>
-//         </div>
-
-//         {/* Summary Block */}
-//         <div className="flex justify-end pt-6 border-t border-slate-100">
-//           <div className="w-full max-w-xs space-y-2.5 text-sm">
-//             <div className="flex justify-between text-slate-500">
-//               <span>Subtotal</span>
-//               <span className="font-mono text-slate-700">₦{grandTotal.toLocaleString()}</span>
-//             </div>
-//             <div className="flex justify-between font-bold text-slate-900 text-base border-t border-slate-200/60 pt-2.5">
-//               <span>Total</span>
-//               <span className="font-mono text-slate-950">₦{(invoice.total ?? grandTotal).toLocaleString()}</span>
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* Bank & Payment Details */}
-//         {(org?.bank_name || org?.account_name || org?.account_number) && (
-//           <div className="border-t border-slate-100 pt-6 space-y-2 text-xs">
-//             <h4 className="font-bold text-slate-400 uppercase tracking-wider">Payment Details</h4>
-//             <div className="grid grid-cols-3 gap-6 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-//               <div>
-//                 <span className="text-slate-400 block mb-0.5">Bank</span>
-//                 <span className="font-medium text-slate-800">{org?.bank_name}</span>
-//               </div>
-//               <div>
-//                 <span className="text-slate-400 block mb-0.5">Account Name</span>
-//                 <span className="font-medium text-slate-800">{org?.account_name}</span>
-//               </div>
-//               <div>
-//                 <span className="text-slate-400 block mb-0.5">Account Number</span>
-//                 <span className="font-mono font-bold text-slate-900 text-sm tracking-wide">{org?.account_number}</span>
-//               </div>
-//             </div>
-//           </div>
-//         )}
-
-//         {/* Terms & Conditions */}
-//         {org?.payment_terms && (
-//           <div className="border-t border-slate-100 pt-6 space-y-1.5 text-xs">
-//             <h4 className="font-bold text-slate-400 uppercase tracking-wider">Terms & Conditions</h4>
-//             <p className="text-slate-500 leading-relaxed whitespace-pre-line bg-slate-50/30 p-4 rounded-xl border border-slate-100/50">
-//               {org.payment_terms}
-//             </p>
-//           </div>
-//         )}
-
-//         {/* Notes */}
-//         {invoice.notes && (
-//           <div className="border-t border-slate-100 pt-6 space-y-1.5 text-xs">
-//             <h4 className="font-bold text-slate-400 uppercase tracking-wider">Notes</h4>
-//             <p className="text-slate-500 leading-relaxed whitespace-pre-line">{invoice.notes}</p>
-//           </div>
-//         )}
-//       </div>
-
-//       {actionError && (
-//         <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 print:hidden">
-//           {actionError}
-//         </div>
-//       )}
-
-//       {/* Actions (hidden on print) */}
-//       <div className="flex justify-end gap-3 print:hidden">
-//         <button
-//           onClick={() => window.print()}
-//           className="px-4 py-2 border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-850 rounded-lg hover:bg-slate-50 transition-all text-sm font-medium cursor-pointer"
-//         >
-//           Print
-//         </button>
-
-//         <button
-//           onClick={downloadPDF}
-//           className="px-4 py-2 border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-850 rounded-lg hover:bg-slate-50 transition-all text-sm font-medium cursor-pointer"
-//         >
-//           Download PDF
-//         </button>
-
-//         {isOwnerOrAdmin && invoice.status !== "void" && (
-//           <button
-//             onClick={voidInvoice}
-//             disabled={voiding}
-//             className="px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg transition-all text-sm font-medium cursor-pointer disabled:opacity-50"
-//           >
-//             {voiding ? "Voiding..." : "Void"}
-//           </button>
-//         )}
-
-//         {invoice.status !== "paid" && invoice.status !== "void" && (
-//           <button
-//             onClick={markAsPaid}
-//             disabled={paying}
-//             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer disabled:opacity-50"
-//           >
-//             {paying ? "Processing..." : "Mark as Paid"}
-//           </button>
-//         )}
-//       </div>
-
-//       {/* Print tweaks */}
-//       <style jsx global>{`
-//         @media print {
-//           body {
-//             background: #fff;
-//           }
-//           .print\:hidden {
-//             display: none !important;
-//           }
-//           #invoice {
-//             border: none !important;
-//             box-shadow: none !important;
-//             padding: 0 !important;
-//             margin: 0 !important;
-//           }
-//         }
-//       `}</style>
-//     </div>
-//   );
-// }
-
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -492,10 +7,10 @@ import jsPDF from "jspdf";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useOrganization } from "../../components/OrganizationProvider";
 import type { InvoiceStatus, InvoiceType } from "@/lib/supabase/database.types";
-import { StatusBadge, TypeBadge } from "@/app/components/ui/Badge";
 import { Button } from "@/app/components/ui/Button";
 import { useConfirm } from "@/app/components/ui/useConfirm";
 import { useToast } from "@/app/components/ui/Toast";
+import { formatCurrency } from "@/lib/format";
 
 // ---------------- TYPES ----------------
 type Customer = { name: string; email?: string | null; phone?: string | null };
@@ -506,6 +21,7 @@ type Invoice = {
   type: InvoiceType;
   status: InvoiceStatus;
   total: number;
+  currency?: string | null;
   notes?: string | null;
   created_at: string;
   issue_date?: string | null;
@@ -532,6 +48,41 @@ const daysBetween = (start?: string | null, end?: string | null) => {
   const diff = new Date(end).getTime() - new Date(start).getTime();
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 };
+
+// The shared StatusBadge/TypeBadge components (components/ui/Badge.tsx) use
+// Tailwind's default palette, which Tailwind v4 builds on oklch() — fine
+// everywhere else (browsers render oklch natively), but html2canvas doesn't
+// reliably parse it and washes the colors out. These two are plain-hex
+// stand-ins used *only* inside the html2canvas-captured #invoice container.
+function PrintTypeBadge({ type }: { type: InvoiceType }) {
+  const isSale = type === "sale";
+  return (
+    <span
+      className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
+      style={isSale ? { background: "#EAF2EB", color: "#355834" } : { background: "#FBF1DE", color: "#B7791F" }}
+    >
+      {isSale ? "Sale" : "Rental"}
+    </span>
+  );
+}
+
+function PrintStatusBadge({ status }: { status: InvoiceStatus }) {
+  const styles: Record<InvoiceStatus, { background: string; color: string }> = {
+    draft: { background: "#F1F5F9", color: "#475569" },
+    sent: { background: "#DBEAFE", color: "#1D4ED8" },
+    paid: { background: "#DCFCE7", color: "#15803D" },
+    overdue: { background: "#FEF3C7", color: "#B45309" },
+    void: { background: "#FEE2E2", color: "#B91C1C" },
+  };
+  return (
+    <span
+      className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
+      style={styles[status]}
+    >
+      {status}
+    </span>
+  );
+}
 
 export default function InvoiceDetailPage() {
   const { id } = useParams() as { id: string };
@@ -641,6 +192,7 @@ export default function InvoiceDetailPage() {
   }
 
   const isRental = invoice.type === "rental";
+  const currency = invoice.currency || org.currency || "NGN";
 
   const downloadPDF = async () => {
     const element = document.getElementById("invoice");
@@ -662,6 +214,13 @@ export default function InvoiceDetailPage() {
         scale: 2, // high quality
         useCORS: true,
         logging: false,
+        backgroundColor: "#ffffff",
+        // letterRendering forces html2canvas to draw each character
+        // individually instead of whole strings at once — this is the
+        // standard fix for the ₦ (Naira) glyph overlapping adjacent
+        // digits, which is a width-calculation bug in html2canvas's own
+        // text rasterizer, not a font issue.
+        // letterRendering: true,
       });
 
       const imgData = canvas.toDataURL("image/png");
@@ -701,40 +260,68 @@ export default function InvoiceDetailPage() {
       {/* Printable Invoice Container */}
       <div
         id="invoice"
-        className="bg-white p-12 space-y-10 border border-slate-200/60 rounded-2xl shadow-md"
+        className="relative bg-white p-12 space-y-10 border border-[#e2e8f0] rounded-2xl shadow-md overflow-hidden"
       >
+        {/* Brand accent — green for sale, amber for rental, matching the badges everywhere else */}
+        <div
+          className="absolute top-0 left-0 right-0 h-1.5"
+          style={{ background: isRental ? "#B7791F" : "#355834" }}
+        />
+
+        {/* PAID / VOID stamp — a real invoice convention, and useful even printed in black & white */}
+        {(invoice.status === "paid" || invoice.status === "void") && (
+          <div
+            className="absolute top-24 right-12 pointer-events-none select-none"
+            style={{ transform: "rotate(-12deg)" }}
+          >
+            <span
+              className="text-5xl font-extrabold uppercase tracking-widest border-4 rounded-xl px-4 py-1"
+              style={
+                invoice.status === "paid"
+                  ? { color: "#16A34A", borderColor: "#16A34A", opacity: 0.35 }
+                  : { color: "#DC2626", borderColor: "#DC2626", opacity: 0.35 }
+              }
+            >
+              {invoice.status}
+            </span>
+          </div>
+        )}
+
         {/* Header */}
-        <div className="flex justify-between items-start border-b border-slate-100 pb-8">
+        <div className="flex justify-between items-start border-b border-[#f1f5f9] pb-8">
           <div className="flex items-center gap-4">
             {org?.logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={org.logo_url}
                 alt="logo"
-                className="h-16 w-16 object-cover rounded-xl border border-slate-200 shadow-sm"
+                className="h-16 w-16 object-cover rounded-xl border border-[#e2e8f0] shadow-sm"
               />
             ) : (
-              <div className="w-14 h-14 rounded-xl bg-slate-900 flex items-center justify-center text-white font-bold text-xl uppercase tracking-wider">
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center text-white font-bold text-xl uppercase tracking-wider"
+                style={{ background: "#0f172a" }}
+              >
                 {org?.name ? org.name[0] : "B"}
               </div>
             )}
             <div>
-              <h1 className="text-xl font-bold text-slate-900">
+              <h1 className="text-xl font-bold" style={{ color: "#0f172a" }}>
                 {org?.name || "Business Name"}
               </h1>
-              <p className="text-sm text-slate-500">{org?.email}</p>
-              <p className="text-sm text-slate-500">{org?.phone}</p>
-              <p className="text-xs text-slate-400 mt-1">{org?.address}</p>
+              <p className="text-sm" style={{ color: "#64748b" }}>{org?.email}</p>
+              <p className="text-sm" style={{ color: "#64748b" }}>{org?.phone}</p>
+              <p className="text-xs mt-1" style={{ color: "#94a3b8" }}>{org?.address}</p>
             </div>
           </div>
 
           <div className="text-right">
             <div className="flex items-center justify-end gap-2 mb-2">
-              <TypeBadge type={invoice.type} />
-              <StatusBadge status={invoice.status} />
+              <PrintTypeBadge type={invoice.type} />
+              <PrintStatusBadge status={invoice.status} />
             </div>
-            <h2 className="text-3xl font-light text-slate-800 tracking-tight">INVOICE</h2>
-            <p className="text-sm font-mono text-slate-500 mt-0.5">
+            <h2 className="text-3xl font-light tracking-tight" style={{ color: "#1e293b" }}>INVOICE</h2>
+            <p className="text-sm font-mono mt-0.5" style={{ color: "#64748b" }}>
               #{invoice.invoice_number || invoice.id.slice(0, 8)}
             </p>
           </div>
@@ -743,22 +330,22 @@ export default function InvoiceDetailPage() {
         {/* Invoice Info / Dates */}
         <div className="grid grid-cols-2 gap-12 text-sm pt-4">
           <div className="space-y-1.5">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Billed To</h3>
-            <p className="font-bold text-slate-800 text-base">{invoice.customers?.name}</p>
+            <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "#94a3b8" }}>Billed To</h3>
+            <p className="font-bold text-base" style={{ color: "#1e293b" }}>{invoice.customers?.name}</p>
             {invoice.customers?.email && (
-              <p className="text-slate-500">{invoice.customers.email}</p>
+              <p style={{ color: "#64748b" }}>{invoice.customers.email}</p>
             )}
             {invoice.customers?.phone && (
-              <p className="text-slate-500">{invoice.customers.phone}</p>
+              <p style={{ color: "#64748b" }}>{invoice.customers.phone}</p>
             )}
           </div>
 
-          <div className="flex flex-col items-end text-right space-y-1.5 text-slate-600">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Details</h3>
+          <div className="flex flex-col items-end text-right space-y-1.5" style={{ color: "#475569" }}>
+            <h3 className="text-xs font-bold uppercase tracking-wider mb-0.5" style={{ color: "#94a3b8" }}>Details</h3>
             {invoice.issue_date && (
               <p>
-                <span className="text-slate-400">Date Issued:</span>{" "}
-                <span className="font-medium text-slate-800">
+                <span style={{ color: "#94a3b8" }}>Date Issued:</span>{" "}
+                <span className="font-medium" style={{ color: "#1e293b" }}>
                   {new Date(invoice.issue_date).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
@@ -769,8 +356,8 @@ export default function InvoiceDetailPage() {
             )}
             {invoice.due_date && (
               <p>
-                <span className="text-slate-400">Due Date:</span>{" "}
-                <span className="font-medium text-slate-800">
+                <span style={{ color: "#94a3b8" }}>Due Date:</span>{" "}
+                <span className="font-medium" style={{ color: "#1e293b" }}>
                   {new Date(invoice.due_date).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
@@ -781,8 +368,8 @@ export default function InvoiceDetailPage() {
             )}
             {isRental && invoice.start_date && (
               <p>
-                <span className="text-slate-400">Rental Start:</span>{" "}
-                <span className="font-medium text-slate-800">
+                <span style={{ color: "#94a3b8" }}>Rental Start:</span>{" "}
+                <span className="font-medium" style={{ color: "#1e293b" }}>
                   {new Date(invoice.start_date).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
@@ -793,8 +380,8 @@ export default function InvoiceDetailPage() {
             )}
             {isRental && invoice.end_date && (
               <p>
-                <span className="text-slate-400">Rental End:</span>{" "}
-                <span className="font-medium text-slate-800">
+                <span style={{ color: "#94a3b8" }}>Rental End:</span>{" "}
+                <span className="font-medium" style={{ color: "#1e293b" }}>
                   {new Date(invoice.end_date).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
@@ -810,51 +397,36 @@ export default function InvoiceDetailPage() {
         <div className="pt-6">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-y border-slate-200 bg-slate-50/50">
-                <th className="p-3 text-left font-bold text-slate-500 text-xs uppercase tracking-wider">Description</th>
-                {isRental && <th className="p-3 text-center font-bold text-slate-500 text-xs uppercase tracking-wider">Start</th>}
-                {isRental && <th className="p-3 text-center font-bold text-slate-500 text-xs uppercase tracking-wider">End</th>}
-                {isRental && <th className="p-3 text-center font-bold text-slate-500 text-xs uppercase tracking-wider">Days</th>}
-                <th className="p-3 text-center font-bold text-slate-500 text-xs uppercase tracking-wider">Qty</th>
-                <th className="p-3 text-right font-bold text-slate-500 text-xs uppercase tracking-wider">Unit Price</th>
-                <th className="p-3 text-right font-bold text-slate-500 text-xs uppercase tracking-wider">Amount</th>
+              <tr style={{ borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+                <th className="p-3 text-left font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Description</th>
+                {isRental && <th className="p-3 text-center font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Days</th>}
+                <th className="p-3 text-center font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Qty</th>
+                <th className="p-3 text-right font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>
+                  {isRental ? "Rate / day" : "Unit Price"}
+                </th>
+                <th className="p-3 text-right font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Amount</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {items.map((it) => {
+            <tbody>
+              {items.map((it, idx) => {
                 const days = daysBetween(
                   it.start_date || invoice.start_date || undefined,
                   it.end_date || invoice.end_date || undefined,
                 );
                 return (
-                  <tr key={it.id} className="text-slate-700">
-                    <td className="p-3 font-medium text-slate-900">{it.name || "Product"}</td>
-                    {isRental && (
-                      <td className="p-3 text-center text-slate-500 whitespace-nowrap">
-                        {it.start_date || invoice.start_date
-                          ? new Date(it.start_date || invoice.start_date!).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })
-                          : "-"}
-                      </td>
-                    )}
-                    {isRental && (
-                      <td className="p-3 text-center text-slate-500 whitespace-nowrap">
-                        {it.end_date || invoice.end_date
-                          ? new Date(it.end_date || invoice.end_date!).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })
-                          : "-"}
-                      </td>
-                    )}
-                    {isRental && <td className="p-3 text-center text-slate-500 font-mono">{days || "-"}</td>}
-                    <td className="p-3 text-center text-slate-500 font-mono">{it.quantity}</td>
-                    <td className="p-3 text-right text-slate-500 font-mono">₦{it.unit_price.toLocaleString()}</td>
-                    <td className="p-3 text-right font-semibold text-slate-950 font-mono">₦{it.total_price.toLocaleString()}</td>
+                  <tr key={it.id} style={{ borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
+                    <td className="p-3 font-medium" style={{ color: "#0f172a" }}>
+                      {it.name || "Product"}
+                      {isRental && (
+                        <p className="text-xs font-normal mt-0.5" style={{ color: "#94a3b8" }}>
+                          {formatCurrency(it.unit_price, currency)}/day × {it.quantity} × {days || 1} days
+                        </p>
+                      )}
+                    </td>
+                    {isRental && <td className="p-3 text-center font-mono" style={{ color: "#64748b" }}>{days || "-"}</td>}
+                    <td className="p-3 text-center font-mono" style={{ color: "#64748b" }}>{it.quantity}</td>
+                    <td className="p-3 text-right font-mono" style={{ color: "#64748b" }}>{formatCurrency(it.unit_price, currency)}</td>
+                    <td className="p-3 text-right font-semibold font-mono" style={{ color: "#020617" }}>{formatCurrency(it.total_price, currency)}</td>
                   </tr>
                 );
               })}
@@ -863,35 +435,38 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* Summary Block */}
-        <div className="flex justify-end pt-6 border-t border-slate-100">
+        <div className="flex justify-end pt-6" style={{ borderTop: "1px solid #f1f5f9" }}>
           <div className="w-full max-w-xs space-y-2.5 text-sm">
-            <div className="flex justify-between text-slate-500">
+            <div className="flex justify-between" style={{ color: "#64748b" }}>
               <span>Subtotal</span>
-              <span className="font-mono text-slate-700">₦{grandTotal.toLocaleString()}</span>
+              <span className="font-mono" style={{ color: "#334155" }}>{formatCurrency(grandTotal, currency)}</span>
             </div>
-            <div className="flex justify-between font-bold text-slate-900 text-base border-t border-slate-200/60 pt-2.5">
+            <div
+              className="flex justify-between font-bold text-base pt-2.5"
+              style={{ color: "#0f172a", borderTop: "1px solid #e2e8f0" }}
+            >
               <span>Total</span>
-              <span className="font-mono text-slate-950">₦{(invoice.total ?? grandTotal).toLocaleString()}</span>
+              <span className="font-mono" style={{ color: "#020617" }}>{formatCurrency(invoice.total ?? grandTotal, currency)}</span>
             </div>
           </div>
         </div>
 
         {/* Bank & Payment Details */}
         {(org?.bank_name || org?.account_name || org?.account_number) && (
-          <div className="border-t border-slate-100 pt-6 space-y-2 text-xs">
-            <h4 className="font-bold text-slate-400 uppercase tracking-wider">Payment Details</h4>
-            <div className="grid grid-cols-3 gap-6 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+          <div className="pt-6 space-y-2 text-xs" style={{ borderTop: "1px solid #f1f5f9" }}>
+            <h4 className="font-bold uppercase tracking-wider" style={{ color: "#94a3b8" }}>Payment Details</h4>
+            <div className="grid grid-cols-3 gap-6 p-4 rounded-xl" style={{ background: "#f8fafc", border: "1px solid #f1f5f9" }}>
               <div>
-                <span className="text-slate-400 block mb-0.5">Bank</span>
-                <span className="font-medium text-slate-800">{org?.bank_name}</span>
+                <span className="block mb-0.5" style={{ color: "#94a3b8" }}>Bank</span>
+                <span className="font-medium" style={{ color: "#1e293b" }}>{org?.bank_name}</span>
               </div>
               <div>
-                <span className="text-slate-400 block mb-0.5">Account Name</span>
-                <span className="font-medium text-slate-800">{org?.account_name}</span>
+                <span className="block mb-0.5" style={{ color: "#94a3b8" }}>Account Name</span>
+                <span className="font-medium" style={{ color: "#1e293b" }}>{org?.account_name}</span>
               </div>
               <div>
-                <span className="text-slate-400 block mb-0.5">Account Number</span>
-                <span className="font-mono font-bold text-slate-900 text-sm tracking-wide">{org?.account_number}</span>
+                <span className="block mb-0.5" style={{ color: "#94a3b8" }}>Account Number</span>
+                <span className="font-mono font-bold text-sm tracking-wide" style={{ color: "#0f172a" }}>{org?.account_number}</span>
               </div>
             </div>
           </div>
@@ -899,9 +474,12 @@ export default function InvoiceDetailPage() {
 
         {/* Terms & Conditions */}
         {org?.payment_terms && (
-          <div className="border-t border-slate-100 pt-6 space-y-1.5 text-xs">
-            <h4 className="font-bold text-slate-400 uppercase tracking-wider">Terms & Conditions</h4>
-            <p className="text-slate-500 leading-relaxed whitespace-pre-line bg-slate-50/30 p-4 rounded-xl border border-slate-100/50">
+          <div className="pt-6 space-y-1.5 text-xs" style={{ borderTop: "1px solid #f1f5f9" }}>
+            <h4 className="font-bold uppercase tracking-wider" style={{ color: "#94a3b8" }}>Terms & Conditions</h4>
+            <p
+              className="leading-relaxed whitespace-pre-line p-4 rounded-xl"
+              style={{ color: "#64748b", background: "#fafbfc", border: "1px solid #f8fafc" }}
+            >
               {org.payment_terms}
             </p>
           </div>
@@ -909,9 +487,9 @@ export default function InvoiceDetailPage() {
 
         {/* Notes */}
         {invoice.notes && (
-          <div className="border-t border-slate-100 pt-6 space-y-1.5 text-xs">
-            <h4 className="font-bold text-slate-400 uppercase tracking-wider">Notes</h4>
-            <p className="text-slate-500 leading-relaxed whitespace-pre-line">{invoice.notes}</p>
+          <div className="pt-6 space-y-1.5 text-xs" style={{ borderTop: "1px solid #f1f5f9" }}>
+            <h4 className="font-bold uppercase tracking-wider" style={{ color: "#94a3b8" }}>Notes</h4>
+            <p className="leading-relaxed whitespace-pre-line" style={{ color: "#64748b" }}>{invoice.notes}</p>
           </div>
         )}
       </div>

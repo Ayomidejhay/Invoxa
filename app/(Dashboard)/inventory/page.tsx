@@ -201,6 +201,7 @@ import { Pagination } from '@/app/components/ui/Pagination'
 import { usePagination } from '@/app/components/ui/usePagination'
 import { useConfirm } from '@/app/components/ui/useConfirm'
 import { useToast } from '@/app/components/ui/Toast'
+import { formatCurrency } from '@/lib/format'
 
 export default function InventoryPage() {
   const supabase = getSupabaseClient()
@@ -390,8 +391,8 @@ export default function InventoryPage() {
                         {p.name}
                         {p.sku && <span className="ml-2 text-xs text-muted font-mono">{p.sku}</span>}
                       </td>
-                      <td className="p-4 font-mono text-dark">{p.sale_price != null ? `₦${p.sale_price.toLocaleString()}` : '—'}</td>
-                      <td className="p-4 font-mono text-dark">{p.rental_price != null ? `₦${p.rental_price.toLocaleString()}` : '—'}</td>
+                      <td className="p-4 font-mono text-dark">{p.sale_price != null ? formatCurrency(p.sale_price, organization.currency) : '—'}</td>
+                      <td className="p-4 font-mono text-dark">{p.rental_price != null ? formatCurrency(p.rental_price, organization.currency) : '—'}</td>
                       <td className="p-4">
                         <span className={`font-mono ${lowStock ? 'text-red-600 font-medium' : 'text-dark'}`}>{p.stock}</span>
                         {lowStock && <Badge tone="danger" className="ml-2">Low</Badge>}

@@ -18,6 +18,7 @@ import { getSupabaseClient } from '@/lib/supabase/client'
 import { useOrganization } from '../components/OrganizationProvider'
 import { Card } from '@/app/components/ui/Card'
 import { SkeletonStatCard } from '@/app/components/ui/Skeleton'
+import { formatCurrency } from '../../../lib/format'
 
 type Stats = {
   totalRevenue: number
@@ -203,8 +204,8 @@ export default function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard title="Revenue" value={`₦${stats.totalRevenue.toLocaleString()}`} accent="primary" />
-        <StatCard title="Outstanding" value={`₦${stats.outstandingRevenue.toLocaleString()}`} accent="rental" />
+        <StatCard title="Revenue" value={formatCurrency(stats.totalRevenue)} accent="primary" />
+        <StatCard title="Outstanding" value={formatCurrency(stats.outstandingRevenue)} accent="rental" />
         <StatCard title="Invoices" value={stats.totalInvoices} />
         <StatCard title="Customers" value={stats.totalCustomers} />
         <StatCard title="Inventory" value={stats.totalProducts} />
