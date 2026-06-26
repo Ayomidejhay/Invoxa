@@ -1,9 +1,12 @@
 import React from 'react'
+import { Suspense } from 'react'
 import SignUp from '../components/SignUp'
 
 const page = () => {
   return (
-    <div><SignUp /></div>
+    <Suspense fallback={null}>
+      <SignUp />
+    </Suspense>
   )
 }
 

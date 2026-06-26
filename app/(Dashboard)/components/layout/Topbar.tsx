@@ -1,40 +1,84 @@
+
+
+// 'use client'
+
+// import { useRouter } from 'next/navigation'
+// import { getSupabaseClient } from '@/lib/supabase/client'
+// import { useOrganization } from '../OrganizationProvider'
+// import { MobileSidebar } from './MobileSidebar'
+
+// export default function Topbar({ email }: { email: string | null }) {
+//   const router = useRouter()
+//   const { organization, profile } = useOrganization()
+//   const supabase = getSupabaseClient()
+
+//   const handleLogout = async () => {
+//     await supabase.auth.signOut()
+//     router.push('/login')
+//   }
+
+//   return (
+//     <div className="bg-light border-b flex items-center justify-between p-6 print:hidden">
+//       <div className="flex items-center gap-4">
+//         <MobileSidebar />
+//         <div>
+//           <h2 className="font-semibold leading-tight">{organization.name}</h2>
+//           <span className="text-xs text-gray-500 capitalize">{profile.role}</span>
+//         </div>
+//       </div>
+
+//       <div className="flex items-center gap-4">
+//         <span className="hidden sm:block text-sm text-gray-600">
+//           {email}
+//         </span>
+//         <button
+//           onClick={handleLogout}
+//           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+//         >
+//           Logout
+//         </button>
+//       </div>
+//     </div>
+//   )
+// }
+
+
 'use client'
 
-import { User } from '@supabase/supabase-js'
-import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
+import { getSupabaseClient } from '@/lib/supabase/client'
+import { useOrganization } from '../OrganizationProvider'
 import { MobileSidebar } from './MobileSidebar'
+import { Button } from '@/app/components/ui/Button'
 
-export default function Topbar({ user }: { user: User }) {
+export default function Topbar({ email }: { email: string | null }) {
   const router = useRouter()
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const { organization, profile } = useOrganization()
+  const supabase = getSupabaseClient()
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.push('/')
+    router.push('/login')
+    router.refresh()
   }
 
   return (
-    <div className=" bg-light border-b flex items-center justify-between p-6 print:hidden">
+    <div className="bg-light border-b border-border flex items-center justify-between p-6 print:hidden">
       <div className="flex items-center gap-4">
         <MobileSidebar />
-        <h2 className="font-semibold">Dashboard</h2>
+        <div>
+          <h2 className="font-semibold leading-tight text-dark">{organization.name}</h2>
+          <span className="text-xs text-muted capitalize">{profile.role}</span>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
-         <span className="hidden sm:block text-sm text-gray-600">
-          {user.email}
+        <span className="hidden sm:block text-sm text-muted">
+          {email}
         </span>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green"
-        >
+        <Button size="sm" onClick={handleLogout}>
           Logout
-        </button>
+        </Button>
       </div>
     </div>
   )

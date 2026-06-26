@@ -3,281 +3,169 @@
 // "use client";
 
 // import { useEffect, useState } from "react";
-// import { createBrowserClient } from "@supabase/ssr";
 // import { useRouter } from "next/navigation";
+// import { getSupabaseClient } from "@/lib/supabase/client";
+// import { useOrganization } from "../../components/OrganizationProvider";
+// import type { Customer, Product, InvoiceType } from "@/lib/supabase/database.types";
 
-// type Customer = {
-//   id: string;
-//   name: string;
-// };
-
-// type Product = {
-//   id: string;
-//   name: string;
-//   sale_price: number | null;
-//   rental_price: number | null;
-// };
-
-// type InvoiceItem = {
+// type DraftItem = {
 //   product_id: string;
 //   quantity: number;
-//   unit_price: number;
 // };
 
 // export default function CreateInvoicePage() {
 //   const router = useRouter();
-
-//   const supabase = createBrowserClient(
-//     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-//     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-//   );
+//   const supabase = getSupabaseClient();
+//   const { organization } = useOrganization();
 
 //   const [customers, setCustomers] = useState<Customer[]>([]);
 //   const [products, setProducts] = useState<Product[]>([]);
 //   const [loading, setLoading] = useState(false);
+//   const [submitError, setSubmitError] = useState<string | null>(null);
 
-//   const [items, setItems] = useState<InvoiceItem[]>([]);
+//   const [items, setItems] = useState<DraftItem[]>([{ product_id: "", quantity: 1 }]);
 
 //   const [form, setForm] = useState({
 //     customer_id: "",
-//     type: "sale",
+//     type: "sale" as InvoiceType,
 //     start_date: "",
 //     end_date: "",
+//     due_date: "",
+//     notes: "",
 //   });
 
-//   const [errors, setErrors] = useState<{
-//     customer?: string;
-//     items?: string;
-//     rental?: string;
-//     general?: string;
-//   }>({});
+//   const [errors, setErrors] = useState<{ customer?: string; items?: string; rental?: string }>({});
 
 //   useEffect(() => {
 //     const loadData = async () => {
-//       const { data: c } = await supabase.from("customers").select("*");
-//       const { data: p } = await supabase.from("products").select("*");
-
+//       const [{ data: c }, { data: p }] = await Promise.all([
+//         supabase.from("customers").select("*").eq("organization_id", organization.id).order("name"),
+//         supabase.from("products").select("*").eq("organization_id", organization.id).order("name"),
+//       ]);
 //       setCustomers(c || []);
 //       setProducts(p || []);
 //     };
-
 //     loadData();
-//   }, []);
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [organization.id]);
 
-//   const addItem = () => {
-//     setItems([
-//       ...items,
-//       {
-//         product_id: "",
-//         quantity: 1,
-//         unit_price: 0,
-//       },
-//     ]);
+//   const productById = (id: string) => products.find((p) => p.id === id);
+
+//   const rentalDays = () => {
+//     if (!form.start_date || !form.end_date) return 0;
+//     const start = new Date(form.start_date);
+//     const end = new Date(form.end_date);
+//     const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+//     return diff > 0 ? diff : 0;
 //   };
 
-//   const removeItem = (index: number) => {
+//   // Client-side total is a *preview only* — create_invoice() on the server
+//   // recomputes this authoritatively from current product prices, so a
+//   // stale price here can never under/overcharge.
+//   const getItemTotal = (item: DraftItem) => {
+//     const product = productById(item.product_id);
+//     if (!product) return 0;
+//     if (form.type === "sale") {
+//       return (product.sale_price || 0) * item.quantity;
+//     }
+//     return (product.rental_price || 0) * item.quantity * rentalDays();
+//   };
+
+//   const calculateTotal = () => items.reduce((sum, item) => sum + getItemTotal(item), 0);
+
+//   const addItem = () => setItems([...items, { product_id: "", quantity: 1 }]);
+
+//   const removeItem = (index: number) => setItems(items.filter((_, i) => i !== index));
+
+//   const updateItem = (index: number, field: keyof DraftItem, value: string | number) => {
 //     const updated = [...items];
-//     updated.splice(index, 1);
+//     updated[index] = { ...updated[index], [field]: value };
 //     setItems(updated);
 //   };
 
-//   const updateItem = <K extends keyof InvoiceItem>(
-//     index: number,
-//     field: K,
-//     value: InvoiceItem[K],
-//   ) => {
-//     const updated = [...items];
-//     updated[index][field] = value;
-
-//     const product = products.find((p) => p.id === updated[index].product_id);
-
-//     if (product) {
-//       updated[index].unit_price =
-//         form.type === "sale"
-//           ? product.sale_price || 0
-//           : product.rental_price || 0;
-//     }
-
-//     setItems(updated);
-//   };
-
-//   // ================= PER ITEM TOTAL =================
-//   const getItemTotal = (item: InvoiceItem) => {
-//     return item.unit_price * item.quantity;
-//   };
-
-//   const calculateTotal = () => {
-//     const base = items.reduce(
-//       (sum, item) => sum + item.unit_price * item.quantity,
-//       0,
-//     );
-
-//     if (form.type === "rental") {
-//       if (!form.start_date || !form.end_date) return 0;
-
-//       const start = new Date(form.start_date);
-//       const end = new Date(form.end_date);
-
-//       const days = end.getTime() - start.getTime();
-
-//       return base * days;
-//     }
-
-//     return base;
-//   };
-
-  
-
-//   // ================= VALIDATION =================
 //   const validate = () => {
 //     const newErrors: typeof errors = {};
 
-//     if (!form.customer_id) {
-//       newErrors.customer = "Please select a customer";
-//     }
+//     if (!form.customer_id) newErrors.customer = "Please select a customer";
 
-//     if (items.length === 0) {
-//       newErrors.items = "Add at least one item";
-//     }
-
-//     if (items.some((i) => !i.product_id)) {
-//       newErrors.items = "All items must have a selected product";
-//     }
+//     const validItems = items.filter((i) => i.product_id);
+//     if (validItems.length === 0) newErrors.items = "Add at least one item";
 
 //     if (form.type === "rental") {
 //       if (!form.start_date || !form.end_date) {
-//         newErrors.rental = "Start and end dates are required for rental";
-//       } else {
-//         const start = new Date(form.start_date);
-//         const end = new Date(form.end_date);
-
-//         if (end <= start) {
-//           newErrors.rental = "End date must be after start date";
-//         }
+//         newErrors.rental = "Start and end dates are required";
+//       } else if (new Date(form.end_date) < new Date(form.start_date)) {
+//         newErrors.rental = "End date must be on or after the start date";
 //       }
 //     }
 
 //     setErrors(newErrors);
-
 //     return Object.keys(newErrors).length === 0;
 //   };
 
-//   // ================= SUBMIT =================
 //   const handleSubmit = async () => {
+//     setSubmitError(null);
 //     if (!validate()) return;
 
 //     setLoading(true);
 
-//     try {
-//       const {
-//         data: { user },
-//       } = await supabase.auth.getUser();
+//     const { data: invoice, error } = await supabase.rpc("create_invoice", {
+//       p_customer_id: form.customer_id,
+//       p_type: form.type,
+//       p_items: items
+//         .filter((i) => i.product_id)
+//         .map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+//       p_start_date: form.type === "rental" ? form.start_date : null,
+//       p_end_date: form.type === "rental" ? form.end_date : null,
+//       p_due_date: form.due_date || null,
+//       p_notes: form.notes || null,
+//     });
 
-//       const { data: profile } = await supabase
-//         .from("profiles")
-//         .select("organization_id")
-//         .eq("id", user?.id)
-//         .single();
+//     setLoading(false);
 
-//       const total = calculateTotal();
-
-//       //   const { data: invoice } = await supabase
-//       //     .from("invoices")
-//       //     .insert({
-//       //       organization_id: profile?.organization_id,
-//       //       customer_id: form.customer_id,
-//       //       type: form.type,
-//       //       total,
-//       //       subtotal: total,
-//       //       start_date: form.type === "rental" ? form.start_date : null,
-//       //       end_date: form.type === "rental" ? form.end_date : null,
-//       //     })
-//       //     .select()
-//       //     .single();
-//       const { data: invoice, error } = await supabase
-//         .from("invoices")
-//         .insert({
-//           organization_id: profile?.organization_id,
-//           customer_id: form.customer_id,
-//           type: form.type,
-//           total,
-//           subtotal: total,
-//           start_date: form.type === "rental" ? form.start_date : null,
-//           end_date: form.type === "rental" ? form.end_date : null,
-//         })
-//         .select()
-//         .single();
-
-//       console.log("INVOICE ERROR:", error);
-//       console.log("INVOICE DATA:", invoice);
-
-//       if (error || !invoice) {
-//         throw new Error(error?.message || "Invoice creation failed");
-//       }
-
-//       for (const item of items) {
-//         await supabase.from("invoice_items").insert({
-//           invoice_id: invoice.id,
-//           product_id: item.product_id,
-//           quantity: item.quantity,
-//           unit_price: item.unit_price,
-//           total_price: item.unit_price * item.quantity,
-//         });
-//       }
-
-//       router.push("/invoice");
-//     } catch (err) {
-//       console.error(err);
-//       setErrors({
-//         general: "Failed to create invoice. Try again.",
-//       });
-//     } finally {
-//       setLoading(false);
+//     if (error || !invoice) {
+//       // Surfaces server-side validation directly — e.g. "Insufficient stock
+//       // for Widget (have 2, need 5)" from the create_invoice() function.
+//       setSubmitError(error?.message || "Failed to create invoice");
+//       return;
 //     }
+
+//     router.push(`/invoice/${invoice.id}`);
 //   };
 
 //   return (
-//     <div className="space-y-6">
+//     <div className="space-y-6 max-w-3xl">
 //       <h1 className="text-xl font-semibold">Create Invoice</h1>
 
-//       {/* CUSTOMER + TYPE */}
-//       <div className="grid md:grid-cols-2 gap-4">
-//         <div>
-//           <div className="flex flex-col gap-1">
-//             <label htmlFor="">Customer Name</label>
-//             <select
-//               value={form.customer_id}
-//               onChange={(e) => {
-//                 setForm({
-//                   ...form,
-//                   customer_id: e.target.value,
-//                 });
-//                 setErrors((p) => ({
-//                   ...p,
-//                   customer: undefined,
-//                 }));
-//               }}
-//               className="border p-3 rounded-lg w-full"
-//             >
-//               <option value="">Select Customer</option>
-//               {customers.map((c) => (
-//                 <option key={c.id} value={c.id}>
-//                   {c.name}
-//                 </option>
-//               ))}
-//             </select>
-//           </div>
+//       {submitError && (
+//         <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+//           {submitError}
+//         </div>
+//       )}
 
-//           {errors.customer && (
-//             <p className="text-red-500 text-sm">{errors.customer}</p>
-//           )}
+//       <div className="grid md:grid-cols-2 gap-4">
+//         <div className="flex flex-col gap-1">
+//           <label>Customer</label>
+//           <select
+//             value={form.customer_id}
+//             onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
+//             className="border p-3 rounded-lg w-full"
+//           >
+//             <option value="">Select Customer</option>
+//             {customers.map((c) => (
+//               <option key={c.id} value={c.id}>
+//                 {c.name}
+//               </option>
+//             ))}
+//           </select>
+//           {errors.customer && <p className="text-red-500 text-sm">{errors.customer}</p>}
 //         </div>
 
 //         <div className="flex flex-col gap-1">
-//           <label htmlFor="">Invoice Type</label>
+//           <label>Type</label>
 //           <select
 //             value={form.type}
-//             onChange={(e) => setForm({ ...form, type: e.target.value })}
+//             onChange={(e) => setForm({ ...form, type: e.target.value as InvoiceType })}
 //             className="border p-3 rounded-lg"
 //           >
 //             <option value="sale">Sale</option>
@@ -286,124 +174,106 @@
 //         </div>
 //       </div>
 
-//       {/* RENTAL DATES */}
 //       {form.type === "rental" && (
 //         <div className="grid md:grid-cols-2 gap-4">
 //           <div className="flex flex-col gap-1">
-//             <label htmlFor="start_date">Start Date</label>
+//             <label>Start date</label>
 //             <input
 //               type="date"
 //               value={form.start_date}
-//               onChange={(e) =>
-//                 setForm({
-//                   ...form,
-//                   start_date: e.target.value,
-//                 })
-//               }
+//               onChange={(e) => setForm({ ...form, start_date: e.target.value })}
 //               className="border p-3 rounded-lg"
 //             />
 //           </div>
-
 //           <div className="flex flex-col gap-1">
-//             <label htmlFor="end_date">End Date</label>
+//             <label>End date</label>
 //             <input
 //               type="date"
 //               value={form.end_date}
-//               onChange={(e) =>
-//                 setForm({
-//                   ...form,
-//                   end_date: e.target.value,
-//                 })
-//               }
+//               onChange={(e) => setForm({ ...form, end_date: e.target.value })}
 //               className="border p-3 rounded-lg"
 //             />
 //           </div>
-
-//           {errors.rental && (
-//             <p className="text-red-500 text-sm md:col-span-2">
-//               {errors.rental}
-//             </p>
-//           )}
+//           {errors.rental && <p className="text-red-500 text-sm md:col-span-2">{errors.rental}</p>}
 //         </div>
 //       )}
 
-//       {/* ITEMS */}
-//       <div className="space-y-4">
-//         {items.map((item, i) => (
-//           <div key={i} className="grid md:grid-cols-4 gap-3">
-//             <div className="flex flex-col gap-1">
-//               <label htmlFor="">Product</label>
+//       <div className="flex flex-col gap-1">
+//         <label>Due date (optional)</label>
+//         <input
+//           type="date"
+//           value={form.due_date}
+//           onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+//           className="border p-3 rounded-lg max-w-xs"
+//         />
+//       </div>
+
+//       <div className="space-y-3">
+//         <label className="font-medium">Items</label>
+//         {items.map((item, i) => {
+//           const product = productById(item.product_id);
+//           const unitPrice = product ? (form.type === "sale" ? product.sale_price : product.rental_price) : null;
+
+//           return (
+//             <div key={i} className="grid md:grid-cols-5 gap-3 items-center">
 //               <select
+//                 value={item.product_id}
 //                 onChange={(e) => updateItem(i, "product_id", e.target.value)}
-//                 className="border p-2 rounded"
+//                 className="border p-2 rounded md:col-span-2"
 //               >
-//                 <option value="">Select Product</option>
+//                 <option value="">Select product</option>
 //                 {products.map((p) => (
-//                   <option key={p.id} value={p.id}>
-//                     {p.name}
+//                   <option key={p.id} value={p.id} disabled={form.type === "sale" ? p.sale_price == null : p.rental_price == null}>
+//                     {p.name} {form.type === "sale" && p.stock <= 0 ? "(out of stock)" : ""}
 //                   </option>
 //                 ))}
 //               </select>
-//             </div>
 
-//             <div className="flex flex-col gap-1">
-//               <label htmlFor="">Quantity</label>
 //               <input
 //                 type="number"
+//                 min={1}
 //                 value={item.quantity}
-//                 onChange={(e) =>
-//                   updateItem(i, "quantity", Number(e.target.value))
-//                 }
+//                 onChange={(e) => updateItem(i, "quantity", Number(e.target.value))}
 //                 className="border p-2 rounded"
 //               />
-//             </div>
 
-//             <div className="flex flex-col gap-1">
-//               <label htmlFor="">Unit Price</label>
-//               <input
-//                 type="number"
-//                 value={item.unit_price}
-//                 readOnly
-//                 className="border p-2 rounded bg-gray-100"
-//               />
-//             </div>
-//             {/* ITEM TOTAL */}
-//             <div className="flex flex-col gap-3">
-//               <label htmlFor="">Item Total</label>
-//               <div className="font-medium">₦{getItemTotal(item)}</div>
-//             </div>
+//               <div className="text-sm text-gray-600">{unitPrice != null ? `₦${unitPrice}/unit` : "—"}</div>
 
-//             {/* REMOVE BUTTON */}
-//             <div>
-//               <button
-//                 onClick={() => removeItem(i)}
-//                 className="text-red-500 text-sm"
-//               >
-//                 Remove
-//               </button>
+//               <div className="flex items-center justify-between">
+//                 <span className="font-medium">₦{getItemTotal(item).toLocaleString()}</span>
+//                 {items.length > 1 && (
+//                   <button onClick={() => removeItem(i)} className="text-red-600 text-sm">
+//                     Remove
+//                   </button>
+//                 )}
+//               </div>
 //             </div>
-//           </div>
-//         ))}
-
+//           );
+//         })}
 //         {errors.items && <p className="text-red-500 text-sm">{errors.items}</p>}
 
-//         <button onClick={addItem} className="bg-gray-200 px-4 py-2 rounded">
-//           Add Item
+//         <button onClick={addItem} className="text-green-700 text-sm font-medium">
+//           + Add another item
 //         </button>
 //       </div>
 
-//       {/* TOTAL */}
-//       <div className="text-right font-semibold">Total: ₦{calculateTotal()}</div>
+//       <div className="flex flex-col gap-1">
+//         <label>Notes (optional)</label>
+//         <textarea
+//           value={form.notes}
+//           onChange={(e) => setForm({ ...form, notes: e.target.value })}
+//           className="border p-3 rounded-lg"
+//         />
+//       </div>
 
-//       {errors.general && (
-//         <p className="text-red-500 text-right">{errors.general}</p>
-//       )}
+//       <div className="text-right text-lg font-semibold">
+//         Total: ₦{calculateTotal().toLocaleString()}
+//       </div>
 
-//       {/* SUBMIT */}
 //       <button
 //         onClick={handleSubmit}
 //         disabled={loading}
-//         className="bg-deepgreen text-white px-6 py-2 rounded-lg"
+//         className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
 //       >
 //         {loading ? "Creating..." : "Create Invoice"}
 //       </button>
@@ -415,158 +285,104 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import { useOrganization } from "../../components/OrganizationProvider";
+import type { Customer, Product, InvoiceType } from "@/lib/supabase/database.types";
+import { Button } from "@/app/components/ui/Button";
+import { Input } from "@/app/components/ui/Input";
+import { Select } from "@/app/components/ui/Select";
+import { Textarea } from "@/app/components/ui/Textarea";
+import { Card } from "@/app/components/ui/Card";
 
-type Customer = {
-  id: string;
-  name: string;
-};
-
-type Product = {
-  id: string;
-  name: string;
-  sale_price: number | null;
-  rental_price: number | null;
-};
-
-type InvoiceItem = {
+type DraftItem = {
   product_id: string;
   quantity: number;
-  unit_price: number;
 };
 
 export default function CreateInvoicePage() {
   const router = useRouter();
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = getSupabaseClient();
+  const { organization } = useOrganization();
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [items, setItems] = useState<InvoiceItem[]>([]);
+  const [items, setItems] = useState<DraftItem[]>([{ product_id: "", quantity: 1 }]);
 
   const [form, setForm] = useState({
     customer_id: "",
-    type: "sale",
+    type: "sale" as InvoiceType,
     start_date: "",
     end_date: "",
+    due_date: "",
+    notes: "",
   });
 
-  const [errors, setErrors] = useState<{
-    customer?: string;
-    items?: string;
-    rental?: string;
-    general?: string;
-  }>({});
+  const [errors, setErrors] = useState<{ customer?: string; items?: string; rental?: string }>({});
 
   useEffect(() => {
     const loadData = async () => {
-      const { data: c } = await supabase.from("customers").select("*");
-      const { data: p } = await supabase.from("products").select("*");
-
+      const [{ data: c }, { data: p }] = await Promise.all([
+        supabase.from("customers").select("*").eq("organization_id", organization.id).order("name"),
+        supabase.from("products").select("*").eq("organization_id", organization.id).order("name"),
+      ]);
       setCustomers(c || []);
       setProducts(p || []);
     };
-
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organization.id]);
 
-  const addItem = () => {
-    setItems([
-      ...items,
-      {
-        product_id: "",
-        quantity: 1,
-        unit_price: 0,
-      },
-    ]);
-  };
+  const productById = (id: string) => products.find((p) => p.id === id);
 
-  const removeItem = (index: number) => {
-    const updated = [...items];
-    updated.splice(index, 1);
-    setItems(updated);
-  };
-
-  const updateItem = <K extends keyof InvoiceItem>(
-    index: number,
-    field: K,
-    value: InvoiceItem[K]
-  ) => {
-    const updated = [...items];
-    updated[index][field] = value;
-
-    const product = products.find(
-      (p) => p.id === updated[index].product_id
-    );
-
-    if (product) {
-      updated[index].unit_price =
-        form.type === "sale"
-          ? product.sale_price || 0
-          : product.rental_price || 0;
-    }
-
-    setItems(updated);
-  };
-
-  // ================= PER ITEM TOTAL =================
-  const getItemTotal = (item: InvoiceItem) => {
-    if (form.type === "sale") {
-      return item.unit_price * item.quantity;
-    }
-
+  const rentalDays = () => {
     if (!form.start_date || !form.end_date) return 0;
-
     const start = new Date(form.start_date);
     const end = new Date(form.end_date);
-
-    const diff = end.getTime() - start.getTime();
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))+1;
-
-    if (days <= 0) return 0;
-
-    return days * item.unit_price * item.quantity;
+    const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    return diff > 0 ? diff : 0;
   };
 
-  // ================= TOTAL =================
-  const calculateTotal = () => {
-    return items.reduce((sum, item) => {
-      return sum + getItemTotal(item);
-    }, 0);
+  // Client-side total is a *preview only* — create_invoice() on the server
+  // recomputes this authoritatively from current product prices, so a
+  // stale price here can never under/overcharge.
+  const getItemTotal = (item: DraftItem) => {
+    const product = productById(item.product_id);
+    if (!product) return 0;
+    if (form.type === "sale") {
+      return (product.sale_price || 0) * item.quantity;
+    }
+    return (product.rental_price || 0) * item.quantity * rentalDays();
   };
 
-  // ================= VALIDATION =================
+  const calculateTotal = () => items.reduce((sum, item) => sum + getItemTotal(item), 0);
+
+  const addItem = () => setItems([...items, { product_id: "", quantity: 1 }]);
+
+  const removeItem = (index: number) => setItems(items.filter((_, i) => i !== index));
+
+  const updateItem = (index: number, field: keyof DraftItem, value: string | number) => {
+    const updated = [...items];
+    updated[index] = { ...updated[index], [field]: value };
+    setItems(updated);
+  };
+
   const validate = () => {
     const newErrors: typeof errors = {};
 
-    if (!form.customer_id) {
-      newErrors.customer = "Please select a customer";
-    }
+    if (!form.customer_id) newErrors.customer = "Please select a customer";
 
-    if (items.length === 0) {
-      newErrors.items = "Add at least one item";
-    }
-
-    if (items.some((i) => !i.product_id)) {
-      newErrors.items = "All items must have a selected product";
-    }
+    const validItems = items.filter((i) => i.product_id);
+    if (validItems.length === 0) newErrors.items = "Add at least one item";
 
     if (form.type === "rental") {
       if (!form.start_date || !form.end_date) {
         newErrors.rental = "Start and end dates are required";
-      } else {
-        const start = new Date(form.start_date);
-        const end = new Date(form.end_date);
-
-        if (end <= start) {
-          newErrors.rental = "End date must be after start date";
-        }
+      } else if (new Date(form.end_date) < new Date(form.start_date)) {
+        newErrors.rental = "End date must be on or after the start date";
       }
     }
 
@@ -574,78 +390,75 @@ export default function CreateInvoicePage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ================= SUBMIT =================
   const handleSubmit = async () => {
+    setSubmitError(null);
     if (!validate()) return;
 
     setLoading(true);
 
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const { data: invoice, error } = await supabase.rpc("create_invoice", {
+      p_customer_id: form.customer_id,
+      p_type: form.type,
+      p_items: items
+        .filter((i) => i.product_id)
+        .map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+      p_start_date: form.type === "rental" ? form.start_date : null,
+      p_end_date: form.type === "rental" ? form.end_date : null,
+      p_due_date: form.due_date || null,
+      p_notes: form.notes || null,
+    });
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", user?.id)
-        .single();
+    setLoading(false);
 
-      const total = calculateTotal();
-
-      const { data: invoice, error } = await supabase
-        .from("invoices")
-        .insert({
-          organization_id: profile?.organization_id,
-          customer_id: form.customer_id,
-          type: form.type,
-          total,
-          subtotal: total,
-          start_date: form.type === "rental" ? form.start_date : null,
-          end_date: form.type === "rental" ? form.end_date : null,
-        })
-        .select()
-        .single();
-
-      if (error || !invoice) {
-        throw new Error(error?.message || "Invoice creation failed");
-      }
-
-      for (const item of items) {
-        await supabase.from("invoice_items").insert({
-          invoice_id: invoice.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: getItemTotal(item), // ✅ FIXED
-        });
-      }
-
-      router.push("/dashboard/invoices");
-    } catch (err) {
-      console.error(err);
-      setErrors({
-        general: "Failed to create invoice. Try again.",
-      });
-    } finally {
-      setLoading(false);
+    if (error || !invoice) {
+      // Surfaces server-side validation directly — e.g. "Insufficient stock
+      // for Widget (have 2, need 5)" from the create_invoice() function.
+      setSubmitError(error?.message || "Failed to create invoice");
+      return;
     }
+
+    router.push(`/invoice/${invoice.id}`);
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Create Invoice</h1>
+    <div className="space-y-6 max-w-3xl">
+      <h1 className="text-xl font-semibold text-dark">Create Invoice</h1>
 
-      {/* CUSTOMER + TYPE */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <label>Customer</label>
-          <select
+      {submitError && (
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          {submitError}
+        </div>
+      )}
+
+      <Card className="space-y-6">
+        {/* Sale / Rental — the one toggle in this app that's allowed to be loud */}
+        <div className="flex gap-3">
+          {(["sale", "rental"] as const).map((t) => {
+            const active = form.type === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setForm({ ...form, type: t })}
+                className={[
+                  "flex-1 rounded-xl border-2 px-4 py-3 text-sm font-semibold transition-colors cursor-pointer",
+                  active && t === "sale" ? "border-deepgreen bg-primary-soft text-deepgreen" : "",
+                  active && t === "rental" ? "border-rental bg-rental-soft text-rental" : "",
+                  !active ? "border-border text-muted hover:border-gray-300" : "",
+                ].join(" ")}
+              >
+                {t === "sale" ? "Sale" : "Rental"}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <Select
+            label="Customer"
             value={form.customer_id}
-            onChange={(e) =>
-              setForm({ ...form, customer_id: e.target.value })
-            }
-            className="border p-3 rounded-lg w-full"
+            onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
+            error={errors.customer}
           >
             <option value="">Select Customer</option>
             {customers.map((c) => (
@@ -653,93 +466,101 @@ export default function CreateInvoicePage() {
                 {c.name}
               </option>
             ))}
-          </select>
-          {errors.customer && <p className="text-red-500">{errors.customer}</p>}
-        </div>
+          </Select>
 
-        <div>
-          <label>Type</label>
-          <select
-            value={form.type}
-            onChange={(e) =>
-              setForm({ ...form, type: e.target.value })
-            }
-            className="border p-3 rounded-lg"
-          >
-            <option value="sale">Sale</option>
-            <option value="rental">Rental</option>
-          </select>
-        </div>
-      </div>
-
-      {/* RENTAL */}
-      {form.type === "rental" && (
-        <div className="grid md:grid-cols-2 gap-4">
-          <input
+          <Input
+            label="Due date (optional)"
             type="date"
-            value={form.start_date}
-            onChange={(e) =>
-              setForm({ ...form, start_date: e.target.value })
-            }
-            className="border p-3 rounded-lg"
-          />
-          <input
-            type="date"
-            value={form.end_date}
-            onChange={(e) =>
-              setForm({ ...form, end_date: e.target.value })
-            }
-            className="border p-3 rounded-lg"
+            value={form.due_date}
+            onChange={(e) => setForm({ ...form, due_date: e.target.value })}
           />
         </div>
-      )}
 
-      {/* ITEMS */}
-      {items.map((item, i) => (
-        <div key={i} className="grid md:grid-cols-4 gap-3">
-          <select
-            onChange={(e) =>
-              updateItem(i, "product_id", e.target.value)
-            }
-            className="border p-2 rounded"
-          >
-            <option value="">Product</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+        {form.type === "rental" && (
+          <div className="grid md:grid-cols-2 gap-4">
+            <Input
+              label="Start date"
+              type="date"
+              value={form.start_date}
+              onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+            />
+            <Input
+              label="End date"
+              type="date"
+              value={form.end_date}
+              onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+            />
+            {errors.rental && <p className="text-red-600 text-sm md:col-span-2">{errors.rental}</p>}
+          </div>
+        )}
 
-          <input
-            type="number"
-            value={item.quantity}
-            onChange={(e) =>
-              updateItem(i, "quantity", Number(e.target.value))
-            }
-            className="border p-2 rounded"
-          />
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-dark">Items</label>
+          {items.map((item, i) => {
+            const product = productById(item.product_id);
+            const unitPrice = product ? (form.type === "sale" ? product.sale_price : product.rental_price) : null;
 
-          <input
-            type="number"
-            value={item.unit_price}
-            readOnly
-            className="border p-2 bg-gray-100"
-          />
+            return (
+              <div key={i} className="grid md:grid-cols-5 gap-3 items-center">
+                <Select
+                  value={item.product_id}
+                  onChange={(e) => updateItem(i, "product_id", e.target.value)}
+                  className="md:col-span-2"
+                >
+                  <option value="">Select product</option>
+                  {products.map((p) => (
+                    <option
+                      key={p.id}
+                      value={p.id}
+                      disabled={form.type === "sale" ? p.sale_price == null : p.rental_price == null}
+                    >
+                      {p.name} {form.type === "sale" && p.stock <= 0 ? "(out of stock)" : ""}
+                    </option>
+                  ))}
+                </Select>
 
-          <div>₦{getItemTotal(item)}</div>
+                <Input
+                  type="number"
+                  min={1}
+                  value={item.quantity}
+                  onChange={(e) => updateItem(i, "quantity", Number(e.target.value))}
+                />
+
+                <div className="text-sm text-muted font-mono">{unitPrice != null ? `₦${unitPrice}/unit` : "—"}</div>
+
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-medium text-dark">₦{getItemTotal(item).toLocaleString()}</span>
+                  {items.length > 1 && (
+                    <button onClick={() => removeItem(i)} className="text-red-600 text-sm cursor-pointer">
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {errors.items && <p className="text-red-600 text-sm">{errors.items}</p>}
+
+          <button onClick={addItem} className="text-deepgreen text-sm font-medium cursor-pointer">
+            + Add another item
+          </button>
         </div>
-      ))}
 
-      <button onClick={addItem}>Add Item</button>
+        <Textarea
+          label="Notes (optional)"
+          value={form.notes}
+          onChange={(e) => setForm({ ...form, notes: e.target.value })}
+        />
 
-      <div className="text-right font-semibold">
-        Total: ₦{calculateTotal()}
-      </div>
+        <div className="flex items-center justify-between pt-2 border-t border-border">
+          <span className="text-sm text-muted">Total</span>
+          <span className="text-2xl font-semibold font-mono text-dark">₦{calculateTotal().toLocaleString()}</span>
+        </div>
 
-      <button onClick={handleSubmit} disabled={loading}>
-        {loading ? "Creating..." : "Create Invoice"}
-      </button>
+        <Button onClick={handleSubmit} loading={loading} fullWidth size="lg">
+          Create Invoice
+        </Button>
+      </Card>
     </div>
   );
 }
