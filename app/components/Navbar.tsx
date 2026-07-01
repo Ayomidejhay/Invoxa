@@ -164,7 +164,7 @@ export default function Navbar() {
               key={link.href}
               href={link.href}
               className={`text-sm font-medium transition-colors hover:text-deepgreen ${
-                pathname === link.href ? "text-deepgreen" : "text-muted"
+                pathname === link.href ? "text-deepgreen" : "text-gray-500"
               }`}
             >
               {link.label}
@@ -174,7 +174,7 @@ export default function Navbar() {
 
         {/* Desktop CTA */}
         <div className="hidden md:flex items-center gap-4">
-          <Link href="/login" className="text-sm font-medium text-muted hover:text-deepgreen transition-colors">
+          <Link href="/login" className="text-sm font-medium text-gray-500 hover:text-deepgreen transition-colors">
             Log in
           </Link>
           <Link
