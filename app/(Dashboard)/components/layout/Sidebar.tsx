@@ -136,35 +136,61 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`hidden md:flex flex-col bg-slate-900 text-white h-screen fixed left-0 top-0 transition-all duration-300 z-40 ${
+      className={`hidden md:flex flex-col bg-[#131E31] text-white h-screen fixed left-0 top-0 transition-all duration-300 z-40 border-r border-[#1E293B] ${
         collapsed ? 'w-20' : 'w-64'
       }`}
     >
-      <div className="flex items-center justify-between p-4 border-b border-slate-800">
-        {!collapsed && <h1 className="text-lg font-bold">Invoxa</h1>}
-        <button onClick={() => setCollapsed(!collapsed)} className="p-2 hover:bg-slate-800 rounded">
+      <div className="flex items-center justify-between p-4 border-b border-[#1E293B]">
+        {!collapsed && <h1 className="text-lg font-bold tracking-wide text-white">Invoxa</h1>}
+        <button onClick={() => setCollapsed(!collapsed)} className="p-2 hover:bg-[#1E293B] rounded text-slate-400 hover:text-white transition">
           <FiMenu size={20} />
         </button>
       </div>
 
-      <nav className="flex-1 px-3 py-6 space-y-2">
-        {navItems.map((item) => {
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
-                pathname === item.href 
-                  ? 'bg-green-600' 
-                  : 'hover:bg-slate-800'
-              }`}
-            >
-              <Icon size={20} />
-              {!collapsed && <span className="font-medium">{item.name}</span>}
-            </Link>
-          )
-        })}
+      <nav className="flex-1 px-3 py-6 flex flex-col justify-between">
+        {/* Top items */}
+        <div className="space-y-1.5">
+          {navItems.slice(0, 4).map((item) => {
+            const Icon = item.icon
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+                  isActive
+                    ? 'bg-[#1E2D4A] text-[#60A5FA] font-semibold'
+                    : 'text-slate-400 hover:bg-[#1E293B] hover:text-white'
+                }`}
+              >
+                <Icon size={20} className={isActive ? 'text-[#60A5FA]' : 'text-slate-400'} />
+                {!collapsed && <span className="text-sm font-medium">{item.name}</span>}
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* Bottom items (Settings) */}
+        <div className="space-y-1.5">
+          {navItems.slice(4).map((item) => {
+            const Icon = item.icon
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+                  isActive
+                    ? 'bg-[#1E2D4A] text-[#60A5FA] font-semibold'
+                    : 'text-slate-400 hover:bg-[#1E293B] hover:text-white'
+                }`}
+              >
+                <Icon size={20} className={isActive ? 'text-[#60A5FA]' : 'text-slate-400'} />
+                {!collapsed && <span className="text-sm font-medium">{item.name}</span>}
+              </Link>
+            )
+          })}
+        </div>
       </nav>
     </aside>
   )

@@ -1,12 +1,14 @@
-
-
 "use client";
+
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Input } from "@/app/components/ui/Input";
+import { Button } from "@/app/components/ui/Button";
+import AuthLayout from "./AuthLayout";
+import { VerifyAccountIllustration } from "./AuthIllustrations";
 
 const schema = z.object({
   code: z.string().length(6, "Verification code must be 6 digits"),
@@ -30,47 +32,39 @@ export default function VerifyAccount() {
   };
 
   return (
-    <main className="min-h-screen grid md:grid-cols-2 bg-[#F8FAFC]">
-      {/* LEFT PANEL */}
-      <div className="hidden md:flex flex-col justify-center px-12 bg-gradient-to-br from-[#355834] to-[#71B48D] text-white">
-        <h2 className="text-4xl font-bold mb-4">Verify Your Account</h2>
-        <p className="text-lg opacity-90">
-          Enter the 6-digit verification code sent to your email to activate your account.
+    <AuthLayout
+      title="Secure authentication checkpoint."
+      subtitle="Input the unique 6-digit confirmation code we sent to your address to activate your account profile."
+      illustration={<VerifyAccountIllustration />}
+    >
+      <div className="space-y-6">
+        <div className="space-y-1.5">
+          <h1 className="text-2xl font-bold text-white tracking-tight">Verify Account</h1>
+          <p className="text-xs text-zinc-400">Enter validation code to continue.</p>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <Input
+            {...register("code")}
+            label="Verification Code"
+            placeholder="6-digit code"
+            error={errors.code?.message as string}
+            maxLength={6}
+            className="text-center font-mono letter-spacing-lg text-lg"
+          />
+
+          <Button type="submit" loading={loading} fullWidth size="lg" className="mt-6">
+            Verify Account
+          </Button>
+        </form>
+
+        <p className="text-sm text-center text-zinc-400 mt-6">
+          Didn&apos;t receive a code?{" "}
+          <Link href="/forget-password" className="text-green hover:underline font-semibold">
+            Resend
+          </Link>
         </p>
       </div>
-
-      {/* FORM */}
-      <div className="flex items-center justify-center px-6">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl"
-        >
-          <h1 className="text-3xl font-bold mb-6 text-[#355834] text-center">Verify Account</h1>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <input
-                {...register("code")}
-                placeholder="6-digit code"
-                className="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#71B48D]"
-              />
-              {errors.code && <p className="text-red-500 text-sm">{errors.code.message as string}</p>}
-            </div>
-
-            <button
-              disabled={loading}
-              className="w-full bg-[#355834] text-white py-3 rounded-xl"
-            >
-              {loading ? "Verifying..." : "Verify Account"}
-            </button>
-          </form>
-
-          <p className="text-sm mt-6 text-center">
-            Didn’t receive a code? <Link href="/forgot-password" className="text-[#355834]">Resend</Link>
-          </p>
-        </motion.div>
-      </div>
-    </main>
+    </AuthLayout>
   );
 }

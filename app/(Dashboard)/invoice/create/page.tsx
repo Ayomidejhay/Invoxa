@@ -138,17 +138,17 @@ export default function CreateInvoicePage() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <h1 className="text-xl font-semibold text-dark">Create Invoice</h1>
+    <div className="space-y-6 max-w-3xl bg-[#1E1E1E] text-white">
+      <h1 className="text-xl font-bold text-white">Create Invoice</h1>
 
       {submitError && (
-        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-xl bg-red-950/30 border border-red-900/50 px-4 py-3 text-sm text-red-400">
           {submitError}
         </div>
       )}
 
-      <Card className="space-y-6">
-        {/* Sale / Rental — the one toggle in this app that's allowed to be loud */}
+      <Card className="space-y-6 bg-[#202023] border border-zinc-800 p-6 rounded-2xl shadow-sm">
+        {/* Sale / Rental — Toggle */}
         <div className="flex gap-3">
           {(["sale", "rental"] as const).map((t) => {
             const active = form.type === t;
@@ -158,10 +158,10 @@ export default function CreateInvoicePage() {
                 type="button"
                 onClick={() => setForm({ ...form, type: t })}
                 className={[
-                  "flex-1 rounded-xl border-2 px-4 py-3 text-sm font-semibold transition-colors cursor-pointer",
-                  active && t === "sale" ? "border-deepgreen bg-primary-soft text-deepgreen" : "",
-                  active && t === "rental" ? "border-rental bg-rental-soft text-rental" : "",
-                  !active ? "border-border text-muted hover:border-gray-300" : "",
+                  "flex-1 rounded-xl border-2 px-4 py-3 text-sm font-semibold transition-colors cursor-pointer text-center",
+                  active && t === "sale" ? "border-blue-600 bg-blue-950/40 text-blue-400" : "",
+                  active && t === "rental" ? "border-orange-500 bg-orange-950/40 text-orange-400" : "",
+                  !active ? "border-zinc-800 text-zinc-400 hover:border-zinc-700 bg-transparent" : "",
                 ].join(" ")}
               >
                 {t === "sale" ? "Sale" : "Rental"}
@@ -176,10 +176,11 @@ export default function CreateInvoicePage() {
             value={form.customer_id}
             onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
             error={errors.customer}
+            className="bg-[#202023] border-zinc-800 text-white"
           >
-            <option value="">Select Customer</option>
+            <option value="" className="bg-[#202023] text-white">Select Customer</option>
             {customers.map((c) => (
-              <option key={c.id} value={c.id}>
+              <option key={c.id} value={c.id} className="bg-[#202023] text-white">
                 {c.name}
               </option>
             ))}
@@ -190,6 +191,7 @@ export default function CreateInvoicePage() {
             type="date"
             value={form.due_date}
             onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+            className="bg-[#202023] border-zinc-800 text-white"
           />
         </div>
 
@@ -200,36 +202,39 @@ export default function CreateInvoicePage() {
               type="date"
               value={form.start_date}
               onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+              className="bg-[#202023] border-zinc-800 text-white"
             />
             <Input
               label="End date"
               type="date"
               value={form.end_date}
               onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+              className="bg-[#202023] border-zinc-800 text-white"
             />
-            {errors.rental && <p className="text-red-600 text-sm md:col-span-2">{errors.rental}</p>}
+            {errors.rental && <p className="text-red-400 text-sm md:col-span-2">{errors.rental}</p>}
           </div>
         )}
 
         <div className="space-y-3">
-          <label className="text-sm font-medium text-dark">Items</label>
+          <label className="text-sm font-medium text-zinc-200">Items</label>
           {items.map((item, i) => {
             const product = productById(item.product_id);
             const unitPrice = product ? (form.type === "sale" ? product.sale_price : product.rental_price) : null;
 
             return (
-              <div key={i} className="grid md:grid-cols-5 gap-3 items-center">
+              <div key={i} className="grid md:grid-cols-5 gap-3 items-center border-b border-zinc-800/30 pb-3 last:border-b-0 last:pb-0">
                 <Select
                   value={item.product_id}
                   onChange={(e) => updateItem(i, "product_id", e.target.value)}
-                  className="md:col-span-2"
+                  className="md:col-span-2 bg-[#202023] border-zinc-800 text-white"
                 >
-                  <option value="">Select product</option>
+                  <option value="" className="bg-[#202023] text-white">Select product</option>
                   {products.map((p) => (
                     <option
                       key={p.id}
                       value={p.id}
                       disabled={form.type === "sale" ? p.sale_price == null : p.rental_price == null}
+                      className="bg-[#202023] text-white"
                     >
                       {p.name} {form.type === "sale" && p.stock <= 0 ? "(out of stock)" : ""}
                     </option>
@@ -241,14 +246,15 @@ export default function CreateInvoicePage() {
                   min={1}
                   value={item.quantity}
                   onChange={(e) => updateItem(i, "quantity", Number(e.target.value))}
+                  className="bg-[#202023] border-zinc-800 text-white"
                 />
 
-                <div className="text-sm text-muted font-mono">{unitPrice != null ? `${formatCurrency(unitPrice, organization.currency)}/unit` : "—"}</div>
+                <div className="text-sm text-zinc-400 font-mono">{unitPrice != null ? `${formatCurrency(unitPrice, organization.currency)}/unit` : "—"}</div>
 
                 <div className="flex items-center justify-between">
-                  <span className="font-mono font-medium text-dark">{formatCurrency(getItemTotal(item), organization.currency)}</span>
+                  <span className="font-mono font-bold text-white">{formatCurrency(getItemTotal(item), organization.currency)}</span>
                   {items.length > 1 && (
-                    <button onClick={() => removeItem(i)} className="text-red-600 text-sm cursor-pointer">
+                    <button onClick={() => removeItem(i)} className="text-red-400 hover:text-red-300 text-sm cursor-pointer transition-colors">
                       Remove
                     </button>
                   )}
@@ -256,9 +262,9 @@ export default function CreateInvoicePage() {
               </div>
             );
           })}
-          {errors.items && <p className="text-red-600 text-sm">{errors.items}</p>}
+          {errors.items && <p className="text-red-400 text-sm">{errors.items}</p>}
 
-          <button onClick={addItem} className="text-deepgreen text-sm font-medium cursor-pointer">
+          <button onClick={addItem} className="text-blue-400 hover:text-blue-300 text-sm font-semibold cursor-pointer transition-colors">
             + Add another item
           </button>
         </div>
@@ -267,14 +273,15 @@ export default function CreateInvoicePage() {
           label="Notes (optional)"
           value={form.notes}
           onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          className="bg-[#202023] border-zinc-800 text-white"
         />
 
-        <div className="flex items-center justify-between pt-2 border-t border-border">
-          <span className="text-sm text-muted">Total</span>
-          <span className="text-2xl font-semibold font-mono text-dark">{formatCurrency(calculateTotal(), organization.currency)}</span>
+        <div className="flex items-center justify-between pt-4 border-t border-zinc-800">
+          <span className="text-sm text-zinc-400">Total</span>
+          <span className="text-2xl font-bold font-mono text-white">{formatCurrency(calculateTotal(), organization.currency)}</span>
         </div>
 
-        <Button onClick={handleSubmit} loading={loading} fullWidth size="lg">
+        <Button onClick={handleSubmit} loading={loading} fullWidth size="lg" className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold py-3 transition-colors">
           Create Invoice
         </Button>
       </Card>

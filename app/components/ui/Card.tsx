@@ -10,7 +10,7 @@ export function Card({
   return (
     <div
       className={[
-        "bg-white border border-border rounded-2xl shadow-sm",
+        "bg-white border border-border rounded-2xl shadow-sm dark:bg-[#202023] dark:border-zinc-800",
         padded ? "p-6" : "",
         className,
       ].join(" ")}

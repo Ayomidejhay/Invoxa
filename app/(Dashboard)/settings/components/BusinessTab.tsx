@@ -6,15 +6,19 @@
 // import { useState } from 'react'
 // import { getSupabaseClient } from '@/lib/supabase/client'
 // import { useOrganization } from '../../components/OrganizationProvider'
+// import { Card } from '@/app/components/ui/Card'
+// import { Input } from '@/app/components/ui/Input'
+// import { Button } from '@/app/components/ui/Button'
+// import { useToast } from '@/app/components/ui/Toast'
 
 // function BusinessTab() {
 //   const supabase = getSupabaseClient()
 //   const { organization } = useOrganization()
+//   const toast = useToast()
 
 //   const [saving, setSaving] = useState(false)
 //   const [uploading, setUploading] = useState(false)
 //   const [error, setError] = useState<string | null>(null)
-//   const [success, setSuccess] = useState<string | null>(null)
 
 //   // Seeded directly from the OrganizationProvider context — no loading
 //   // spinner needed, the layout already fetched this server-side.
@@ -77,7 +81,6 @@
 
 //     setSaving(true)
 //     setError(null)
-//     setSuccess(null)
 
 //     try {
 //       const { error } = await supabase
@@ -93,8 +96,7 @@
 
 //       if (error) throw error
 
-//       setSuccess('Business profile updated successfully!')
-//       setTimeout(() => setSuccess(null), 3000)
+//       toast.success('Business profile updated')
 //     } catch (err) {
 //       const message = err instanceof Error ? err.message : 'Update failed'
 //       setError(message)
@@ -104,67 +106,48 @@
 //   }
 
 //   return (
-//     <form
-//       onSubmit={handleSubmit}
-//       noValidate
-//       className="bg-white p-6 rounded-2xl shadow-sm space-y-6 relative"
-//     >
-//       <h2 className="text-lg font-semibold">Business Profile</h2>
+//     <Card className="space-y-6">
+//       <form onSubmit={handleSubmit} noValidate className="space-y-6">
+//         <h2 className="text-lg font-semibold text-dark">Business Profile</h2>
 
-//       {error && <p className="text-sm text-red-500">{error}</p>}
+//         {error && <p className="text-sm text-red-600">{error}</p>}
 
-//       {success && (
-//         <div className="absolute top-2 right-2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md">
-//           {success}
+//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//           <Input label="Business name" name="name" value={form.name} onChange={handleChange} />
+//           <Input label="Email" name="email" value={form.email} onChange={handleChange} />
+//           <Input label="Phone" name="phone" value={form.phone} onChange={handleChange} />
+//           <Input label="Address" name="address" value={form.address} onChange={handleChange} />
 //         </div>
-//       )}
 
-//       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//         {(['name', 'email', 'phone', 'address'] as const).map((field) => (
-//           <div key={field} className="flex flex-col gap-1">
-//             <label className="capitalize">{field.replace('_', ' ')}</label>
-//             <input
-//               name={field}
-//               value={form[field]}
-//               onChange={handleChange}
-//               className="border p-3 rounded-lg"
+//         <div className="space-y-3">
+//           <label className="text-sm font-medium text-dark">Business Logo</label>
+
+//           {form.logo_url && (
+//             <img
+//               src={form.logo_url}
+//               alt="Logo"
+//               className="h-16 w-16 object-cover rounded-xl border border-border"
 //             />
-//           </div>
-//         ))}
-//       </div>
+//           )}
 
-//       <div className="space-y-3">
-//         <label className="text-sm">Business Logo</label>
-
-//         {form.logo_url && (
-//           <img
-//             src={form.logo_url}
-//             alt="Logo"
-//             className="h-16 w-16 object-cover rounded-lg border"
+//           <input
+//             type="file"
+//             accept="image/*"
+//             onChange={(e) => {
+//               const file = e.target.files?.[0]
+//               if (file) handleLogoUpload(file)
+//             }}
+//             className="border border-border p-2 rounded-xl w-full text-sm"
 //           />
-//         )}
 
-//         <input
-//           type="file"
-//           accept="image/*"
-//           onChange={(e) => {
-//             const file = e.target.files?.[0]
-//             if (file) handleLogoUpload(file)
-//           }}
-//           className="border p-2 rounded-lg w-full"
-//         />
+//           {uploading && <p className="text-sm text-muted">Uploading...</p>}
+//         </div>
 
-//         {uploading && <p className="text-sm text-gray-500">Uploading...</p>}
-//       </div>
-
-//       <button
-//         type="submit"
-//         disabled={saving}
-//         className="bg-deepgreen text-white px-6 py-2 rounded-lg disabled:opacity-50"
-//       >
-//         {saving ? 'Saving...' : 'Save Changes'}
-//       </button>
-//     </form>
+//         <Button type="submit" loading={saving}>
+//           Save Changes
+//         </Button>
+//       </form>
+//     </Card>
 //   )
 // }
 
@@ -174,6 +157,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase/client'
 import { useOrganization } from '../../components/OrganizationProvider'
 import { Card } from '@/app/components/ui/Card'
@@ -183,6 +167,7 @@ import { useToast } from '@/app/components/ui/Toast'
 
 function BusinessTab() {
   const supabase = getSupabaseClient()
+  const router = useRouter()
   const { organization } = useOrganization()
   const toast = useToast()
 
@@ -267,6 +252,9 @@ function BusinessTab() {
       if (error) throw error
 
       toast.success('Business profile updated')
+      // Same reasoning as InvoiceTab — the org context elsewhere in the app
+      // is seeded server-side and won't pick this up without a refresh.
+      router.refresh()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Update failed'
       setError(message)
@@ -278,26 +266,30 @@ function BusinessTab() {
   return (
     <Card className="space-y-6">
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
-        <h2 className="text-lg font-semibold text-dark">Business Profile</h2>
+        <h2 className="text-lg font-bold text-white">Business Profile</h2>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-400">{error}</p>}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input label="Business name" name="name" value={form.name} onChange={handleChange} />
-          <Input label="Email" name="email" value={form.email} onChange={handleChange} />
-          <Input label="Phone" name="phone" value={form.phone} onChange={handleChange} />
-          <Input label="Address" name="address" value={form.address} onChange={handleChange} />
+          <Input label="Business name" name="name" value={form.name} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
+          <Input label="Email" name="email" value={form.email} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
+          <Input label="Phone" name="phone" value={form.phone} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
+          <Input label="Address" name="address" value={form.address} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
         </div>
 
-        <div className="space-y-3">
-          <label className="text-sm font-medium text-dark">Business Logo</label>
+        <div className="space-y-3 flex flex-col">
+          <label className="text-sm font-medium text-zinc-200">Business Logo</label>
 
           {form.logo_url && (
-            <img
-              src={form.logo_url}
-              alt="Logo"
-              className="h-16 w-16 object-cover rounded-xl border border-border"
-            />
+            <div className="mb-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={form.logo_url}
+                crossOrigin="anonymous"
+                alt="Logo"
+                className="h-16 w-16 object-cover rounded-xl border border-zinc-800 bg-zinc-900"
+              />
+            </div>
           )}
 
           <input
@@ -307,13 +299,13 @@ function BusinessTab() {
               const file = e.target.files?.[0]
               if (file) handleLogoUpload(file)
             }}
-            className="border border-border p-2 rounded-xl w-full text-sm"
+            className="border border-zinc-800 bg-[#202023] text-zinc-300 p-2.5 rounded-xl w-full text-sm cursor-pointer focus:outline-none file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-950/40 file:text-blue-400 hover:file:bg-blue-950/60"
           />
 
-          {uploading && <p className="text-sm text-muted">Uploading...</p>}
+          {uploading && <p className="text-sm text-zinc-400">Uploading...</p>}
         </div>
 
-        <Button type="submit" loading={saving}>
+        <Button type="submit" loading={saving} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold px-6 py-2.5">
           Save Changes
         </Button>
       </form>

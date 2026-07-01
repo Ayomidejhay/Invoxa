@@ -1,221 +1,19 @@
-
-
-
-// "use client";
-// import Link from "next/link";
-// import { motion } from "framer-motion";
-// import { useState } from "react";
-// import { useForm } from "react-hook-form";
-// import { z } from "zod";
-// import { zodResolver } from "@hookform/resolvers/zod";
-// import Image from "next/image";
-// import { signUp, signInWithGoogle } from "@/lib/supabase/auth";
-// import { useRouter, useSearchParams } from "next/navigation";
-
-// const schema = z.object({
-//   name: z.string().min(2, "Name is required"),
-//   email: z.string().email("Invalid email"),
-//   password: z.string().min(6, "Minimum 6 characters"),
-// });
-
-// type FormValues = z.infer<typeof schema>;
-
-// export default function SignUp() {
-//   const router = useRouter();
-//   const searchParams = useSearchParams();
-//   const next = searchParams.get("next") || "/onboarding";
-//   const [showPassword, setShowPassword] = useState(false);
-//   const [loading, setLoading] = useState(false);
-//   const [formError, setFormError] = useState<string | null>(null);
-//   const [checkEmail, setCheckEmail] = useState(false);
-
-//   const {
-//     register,
-//     handleSubmit,
-//     formState: { errors },
-//   } = useForm<FormValues>({ resolver: zodResolver(schema) });
-
-//   const onSubmit = async (data: FormValues) => {
-//     setLoading(true);
-//     setFormError(null);
-
-//     const { data: authData, error } = await signUp(data.email, data.password, data.name);
-
-//     if (error) {
-//       setFormError(error.message);
-//       setLoading(false);
-//       return;
-//     }
-
-//     // If email confirmation is required, Supabase returns a user but no
-//     // session — there's nothing to redirect into yet.
-//     if (!authData.session) {
-//       setCheckEmail(true);
-//       setLoading(false);
-//       return;
-//     }
-
-//     // Confirmation disabled: we're logged in immediately. The signup
-//     // trigger has created a bare profile with no organization yet, so
-//     // /onboarding (not /dashboard) is the correct next stop.
-//     router.push(next);
-//     router.refresh();
-//   };
-
-//   const handleGoogleSignIn = async () => {
-//     setFormError(null);
-//     const { error } = await signInWithGoogle();
-//     if (error) setFormError(error.message);
-//   };
-
-//   if (checkEmail) {
-//     return (
-//       <main className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-6">
-//         <motion.div
-//           initial={{ opacity: 0 }}
-//           animate={{ opacity: 1 }}
-//           className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl text-center"
-//         >
-//           <h1 className="text-2xl font-bold mb-3 text-[#355834]">Check your email</h1>
-//           <p className="text-gray-600">
-//             We&apos;ve sent a confirmation link to your inbox. Click it to activate your account,
-//             then come back and log in to set up your business.
-//           </p>
-//           <Link href="/login" className="inline-block mt-6 text-[#355834] font-medium">
-//             Back to login
-//           </Link>
-//         </motion.div>
-//       </main>
-//     );
-//   }
-
-//   return (
-//     <main className="min-h-screen grid md:grid-cols-2 bg-[#F8FAFC]">
-//       <div className="relative hidden md:flex items-end justify-start px-12 py-12 overflow-hidden bg-gradient-to-br from-[#355834] to-[#71B48D] text-white">
-//         <div className="absolute inset-0 bg-gradient-to-br from-[#355834]/90 via-[#355834]/70 to-[#71B48D]/90" />
-
-//         <motion.div
-//           animate={{ opacity: [0.6, 1, 0.6] }}
-//           transition={{ duration: 6, repeat: Infinity }}
-//           className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] bg-[#8BB174]/40 blur-[120px] rounded-full"
-//         />
-
-//         <motion.div
-//           animate={{ scale: [1, 1.1, 1] }}
-//           transition={{ duration: 8, repeat: Infinity }}
-//           className="absolute bottom-[-120px] right-[-120px] w-[420px] h-[420px] bg-[#71B48D]/30 blur-[140px] rounded-full"
-//         />
-
-//         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-white/10 blur-3xl rounded-full" />
-
-//         <motion.div
-//           animate={{ y: [0, -20, 0], rotate: [-1, 1, -1] }}
-//           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-//           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 backdrop-blur-2xl bg-white/10 border border-white/20 rounded-3xl p-8 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
-//         >
-//           <Image src="/illustration.svg" alt="Illustration" width={600} height={600} />
-//         </motion.div>
-
-//         <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.08),transparent)] opacity-40" />
-
-//         <div className="relative z-20 max-w-sm">
-//           <h2 className="text-4xl font-bold mb-4">Invoxa</h2>
-//           <p className="text-lg opacity-90">
-//             Create invoices, manage inventory, and grow your business.
-//           </p>
-//         </div>
-//       </div>
-
-//       <div className="flex items-center justify-center px-6">
-//         <motion.div
-//           initial={{ opacity: 0 }}
-//           animate={{ opacity: 1 }}
-//           className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl"
-//         >
-//           <h1 className="text-3xl font-bold mb-6 text-[#355834] text-center">Sign Up</h1>
-
-//           {formError && (
-//             <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-//               {formError}
-//             </div>
-//           )}
-
-//           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-//             <div>
-//               <input
-//                 {...register("name")}
-//                 placeholder="Full Name"
-//                 className="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#71B48D] focus:outline-none"
-//               />
-//               {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
-//             </div>
-
-//             <div>
-//               <input
-//                 {...register("email")}
-//                 placeholder="Email"
-//                 className="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#71B48D] focus:outline-none"
-//               />
-//               {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
-//             </div>
-
-//             <div className="relative">
-//               <input
-//                 type={showPassword ? "text" : "password"}
-//                 {...register("password")}
-//                 placeholder="Password"
-//                 className="w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-[#71B48D] focus:outline-none"
-//               />
-//               <button
-//                 type="button"
-//                 onClick={() => setShowPassword(!showPassword)}
-//                 className="absolute right-3 top-3 text-sm text-gray-500"
-//               >
-//                 {showPassword ? "Hide" : "Show"}
-//               </button>
-//               {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
-//             </div>
-
-//             <button
-//               disabled={loading}
-//               className="w-full bg-[#355834] text-white py-3 rounded-xl disabled:opacity-60"
-//             >
-//               {loading ? "Creating account..." : "Create Account"}
-//             </button>
-//           </form>
-
-//           <button
-//             onClick={handleGoogleSignIn}
-//             className="mt-4 w-full border py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-50"
-//           >
-//             <span>🔵</span> Continue with Google
-//           </button>
-
-//           <p className="text-sm mt-6 text-center">
-//             Already have an account?{" "}
-//             <Link href="/login" className="text-[#355834] font-medium">
-//               Login
-//             </Link>
-//           </p>
-//         </motion.div>
-//       </div>
-//     </main>
-//   );
-// }
-
-
 "use client";
+
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import Image from "next/image";
 import { signUp, signInWithGoogle } from "@/lib/supabase/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/app/components/ui/Input";
 import { Button } from "@/app/components/ui/Button";
+import AuthLayout from "./AuthLayout";
+import { SignUpIllustration } from "./AuthIllustrations";
+import { FcGoogle } from "react-icons/fc";
+import { FiMail } from "react-icons/fi";
 
 const schema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -252,42 +50,43 @@ export default function SignUp() {
       return;
     }
 
-    // If email confirmation is required, Supabase returns a user but no
-    // session — there's nothing to redirect into yet.
     if (!authData.session) {
       setCheckEmail(true);
       setLoading(false);
       return;
     }
 
-    // Confirmation disabled: we're logged in immediately. The signup
-    // trigger has created a bare profile with no organization yet, so
-    // /onboarding (not /dashboard) is the correct next stop.
     router.push(next);
     router.refresh();
   };
 
   const handleGoogleSignIn = async () => {
     setFormError(null);
-    const { error } = await signInWithGoogle();
+    const { error } = await signInWithGoogle(next);
     if (error) setFormError(error.message);
   };
 
   if (checkEmail) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-light px-6">
+      <main className="min-h-screen flex items-center justify-center bg-[#0C0C0E] px-6">
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl text-center"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-xl p-8 rounded-2xl shadow-2xl text-center relative"
         >
-          <h1 className="text-2xl font-bold mb-3 text-deepgreen">Check your email</h1>
-          <p className="text-muted">
+          <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-green/20 to-transparent" />
+          <div className="w-12 h-12 rounded-full bg-green/10 border border-green/30 flex items-center justify-center text-green text-xl mx-auto mb-4">
+            <FiMail />
+          </div>
+          <h1 className="text-xl font-bold text-white mb-2">Check your email</h1>
+          <p className="text-sm text-zinc-400 leading-relaxed">
             We&apos;ve sent a confirmation link to your inbox. Click it to activate your account,
             then come back and log in to set up your business.
           </p>
-          <Link href="/login" className="inline-block mt-6 text-deepgreen font-medium">
-            Back to login
+          <Link href="/login" className="inline-block mt-6">
+            <Button size="md" variant="secondary">
+              Back to login
+            </Button>
           </Link>
         </motion.div>
       </main>
@@ -295,93 +94,79 @@ export default function SignUp() {
   }
 
   return (
-    <main className="min-h-screen grid md:grid-cols-2 bg-light">
-      <div className="relative hidden md:flex items-end justify-start px-12 py-12 overflow-hidden bg-gradient-to-br from-deepgreen to-green text-white">
-        <div className="absolute inset-0 bg-gradient-to-br from-deepgreen/90 via-deepgreen/70 to-green/90" />
-
-        <motion.div
-          animate={{ opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 6, repeat: Infinity }}
-          className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] bg-lightgreen/40 blur-[120px] rounded-full"
-        />
-
-        <motion.div
-          animate={{ scale: [1, 1.1, 1] }}
-          transition={{ duration: 8, repeat: Infinity }}
-          className="absolute bottom-[-120px] right-[-120px] w-[420px] h-[420px] bg-green/30 blur-[140px] rounded-full"
-        />
-
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-white/10 blur-3xl rounded-full" />
-
-        <motion.div
-          animate={{ y: [0, -20, 0], rotate: [-1, 1, -1] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 backdrop-blur-2xl bg-white/10 border border-white/20 rounded-3xl p-8 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
-        >
-          <Image src="/illustration.svg" alt="Illustration" width={600} height={600} />
-        </motion.div>
-
-        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.08),transparent)] opacity-40" />
-
-        <div className="relative z-20 max-w-sm">
-          <h2 className="text-4xl font-bold mb-4">Invoxa</h2>
-          <p className="text-lg opacity-90">
-            Create invoices, manage inventory, and grow your business.
-          </p>
+    <AuthLayout
+      title="Create invoices, manage inventory, and grow your business."
+      subtitle="Sign up in seconds to start building professional invoices for sales or rentals, tracking stocks, and adding team roles."
+      illustration={<SignUpIllustration />}
+    >
+      <div className="space-y-6">
+        <div className="space-y-1.5">
+          <h1 className="text-2xl font-bold text-white tracking-tight">Create Account</h1>
+          <p className="text-xs text-zinc-400">Get started today. Setup your modern billing workspace.</p>
         </div>
-      </div>
 
-      <div className="flex items-center justify-center px-6">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl"
-        >
-          <h1 className="text-3xl font-bold mb-6 text-deepgreen text-center">Sign Up</h1>
+        {formError && (
+          <div className="rounded-xl bg-red-500/10 border border-red-500/25 px-4 py-3 text-xs text-red-400">
+            {formError}
+          </div>
+        )}
 
-          {formError && (
-            <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-              {formError}
-            </div>
-          )}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <Input 
+            {...register("name")} 
+            label="Full Name" 
+            placeholder="John Doe" 
+            error={errors.name?.message} 
+          />
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input {...register("name")} placeholder="Full Name" error={errors.name?.message} />
-            <Input {...register("email")} placeholder="Email" error={errors.email?.message} />
+          <Input 
+            {...register("email")} 
+            label="Email Address" 
+            placeholder="name@company.com" 
+            error={errors.email?.message} 
+          />
 
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-zinc-200 uppercase tracking-wider">Password</label>
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
                 {...register("password")}
-                placeholder="Password"
+                placeholder="••••••••"
                 error={errors.password?.message}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-sm text-muted cursor-pointer"
+                className="absolute right-3 top-3 text-xs text-zinc-400 hover:text-zinc-200 cursor-pointer"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
+          </div>
 
-            <Button type="submit" loading={loading} fullWidth size="lg">
-              Create Account
-            </Button>
-          </form>
-
-          <Button variant="outline" onClick={handleGoogleSignIn} fullWidth size="lg" className="mt-4">
-            <span>🔵</span> Continue with Google
+          <Button type="submit" loading={loading} fullWidth size="lg" className="mt-6">
+            Create Account
           </Button>
+        </form>
 
-          <p className="text-sm mt-6 text-center text-dark">
-            Already have an account?{" "}
-            <Link href="/login" className="text-deepgreen font-medium">
-              Login
-            </Link>
-          </p>
-        </motion.div>
+        <div className="relative flex items-center justify-center my-6">
+          <div className="absolute inset-x-0 h-[1px] bg-zinc-800/80" />
+          <span className="relative px-3 bg-[#111113] text-xs text-zinc-500 font-medium">Or continue with</span>
+        </div>
+
+        <Button variant="outline" onClick={handleGoogleSignIn} fullWidth size="lg" className="flex items-center justify-center gap-2.5">
+          <FcGoogle className="text-lg shrink-0" />
+          <span>Continue with Google</span>
+        </Button>
+
+        <p className="text-sm text-center text-zinc-400 mt-6">
+          Already have an account?{" "}
+          <Link href="/login" className="text-green hover:underline font-semibold">
+            Login
+          </Link>
+        </p>
       </div>
-    </main>
+    </AuthLayout>
   );
 }

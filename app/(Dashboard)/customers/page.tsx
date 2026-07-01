@@ -272,11 +272,11 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-[#1E1E1E] text-white">
       {confirmDialog}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-dark">Customers</h1>
+        <h1 className="text-xl font-bold text-white">Customers</h1>
         <Button
           onClick={() => {
             setSelectedCustomer(undefined)
@@ -288,21 +288,23 @@ export default function CustomersPage() {
       </div>
 
       <div className="relative max-w-sm">
-        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
+        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name, email, or phone..."
-          className="pl-9"
+          className="pl-10 bg-[#202023] border border-zinc-800 text-white rounded-lg placeholder-zinc-500"
         />
       </div>
 
       {loading ? (
         <>
           <div className="md:hidden space-y-4">
-            {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-[#202023] border border-zinc-800 p-4 rounded-xl h-24 animate-pulse" />
+            ))}
           </div>
-          <table className="hidden md:table w-full text-sm bg-white border border-border rounded-xl overflow-hidden">
+          <table className="hidden md:table w-full text-sm bg-[#202023] border border-zinc-850 rounded-xl overflow-hidden">
             <tbody>{Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} columns={4} />)}</tbody>
           </table>
         </>
@@ -322,24 +324,24 @@ export default function CustomersPage() {
           {/* MOBILE VIEW: Cards */}
           <div className="md:hidden space-y-4">
             {pageItems.map((c) => (
-              <div key={c.id} className="bg-white p-4 rounded-xl border border-border shadow-sm space-y-3">
+              <div key={c.id} className="bg-[#202023] p-4 rounded-xl border border-zinc-800 shadow-sm space-y-3">
                 <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2 font-bold text-dark">
-                    <FiUser className="text-deepgreen" />
+                  <div className="flex items-center gap-2 font-bold text-zinc-100">
+                    <FiUser className="text-[#60A5FA]" />
                     {c.name}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => { setSelectedCustomer(c); setModalOpen(true) }} className="text-blue-600 p-2 cursor-pointer">
+                    <button onClick={() => { setSelectedCustomer(c); setModalOpen(true) }} className="text-blue-400 p-2 cursor-pointer hover:text-blue-300">
                       <FiEdit2 size={18} />
                     </button>
                     {isOwnerOrAdmin && (
-                      <button onClick={() => handleDelete(c)} className="text-red-600 p-2 cursor-pointer">
+                      <button onClick={() => handleDelete(c)} className="text-red-400 p-2 cursor-pointer hover:text-red-300">
                         <FiTrash2 size={18} />
                       </button>
                     )}
                   </div>
                 </div>
-                <div className="text-sm text-muted space-y-1">
+                <div className="text-sm text-zinc-400 space-y-1">
                   {c.email && <p className="flex items-center gap-2"><FiMail size={14} /> {c.email}</p>}
                   {c.phone && <p className="flex items-center gap-2"><FiPhone size={14} /> {c.phone}</p>}
                 </div>
@@ -348,28 +350,28 @@ export default function CustomersPage() {
           </div>
 
           {/* DESKTOP VIEW: Table */}
-          <div className="hidden md:block bg-white border border-border rounded-xl overflow-hidden shadow-sm">
+          <div className="hidden md:block bg-[#202023] border border-zinc-800 rounded-xl overflow-hidden shadow-sm">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-border">
+              <thead className="bg-[#1A1A1C] border-b border-zinc-800">
                 <tr>
-                  <th className="p-4 text-left font-medium text-muted">Name</th>
-                  <th className="p-4 text-left font-medium text-muted">Email</th>
-                  <th className="p-4 text-left font-medium text-muted">Phone</th>
-                  <th className="p-4 text-left font-medium text-muted">Actions</th>
+                  <th className="p-4 text-left font-semibold text-zinc-400">Name</th>
+                  <th className="p-4 text-left font-semibold text-zinc-400">Email</th>
+                  <th className="p-4 text-left font-semibold text-zinc-400">Phone</th>
+                  <th className="p-4 text-left font-semibold text-zinc-400">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {pageItems.map((c) => (
-                  <tr key={c.id} className="border-t border-border hover:bg-gray-50 transition">
-                    <td className="p-4 font-medium text-dark">{c.name}</td>
-                    <td className="p-4 text-muted">{c.email}</td>
-                    <td className="p-4 text-muted font-mono">{c.phone}</td>
-                    <td className="p-4 flex gap-3">
-                      <button onClick={() => { setSelectedCustomer(c); setModalOpen(true) }} className="text-blue-600 hover:text-blue-800 cursor-pointer">
+                  <tr key={c.id} className="border-t border-zinc-800/80 hover:bg-zinc-800/30 transition text-zinc-300">
+                    <td className="p-4 font-semibold text-white">{c.name}</td>
+                    <td className="p-4 text-zinc-300">{c.email}</td>
+                    <td className="p-4 text-zinc-350 font-mono">{c.phone}</td>
+                    <td className="p-4 flex gap-3 items-center">
+                      <button onClick={() => { setSelectedCustomer(c); setModalOpen(true) }} className="text-blue-400 hover:text-blue-300 cursor-pointer text-sm">
                         Edit
                       </button>
                       {isOwnerOrAdmin && (
-                        <button onClick={() => handleDelete(c)} className="text-red-600 hover:text-red-800 cursor-pointer">
+                        <button onClick={() => handleDelete(c)} className="text-red-400 hover:text-red-300 cursor-pointer text-sm">
                           Delete
                         </button>
                       )}
@@ -380,7 +382,9 @@ export default function CustomersPage() {
             </table>
           </div>
 
-          <Pagination page={page} pageCount={pageCount} onPageChange={setPage} totalItems={totalItems} pageSize={pageSize} />
+          <div className="mt-4">
+            <Pagination page={page} pageCount={pageCount} onPageChange={setPage} totalItems={totalItems} pageSize={pageSize} />
+          </div>
         </>
       )}
 

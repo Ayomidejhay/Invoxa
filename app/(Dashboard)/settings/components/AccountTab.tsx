@@ -324,7 +324,7 @@ export function AccountTab() {
     placeholder: string
   ) => (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium text-dark">{label}</label>
+      <label className="text-sm font-medium text-zinc-200">{label}</label>
       <div className="relative">
         <input
           type={showPassword[field] ? 'text' : 'password'}
@@ -332,7 +332,7 @@ export function AccountTab() {
           value={form[name as keyof typeof form]}
           onChange={handleChange}
           placeholder={placeholder}
-          className="border border-border p-2.5 rounded-xl w-full pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-deepgreen/30 focus:border-deepgreen"
+          className="border border-zinc-800 bg-[#202023] text-white p-2.5 rounded-xl w-full pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-500"
         />
         <button
           type="button"
@@ -340,7 +340,7 @@ export function AccountTab() {
             e.preventDefault()
             toggleVisibility(field)
           }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted cursor-pointer"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 cursor-pointer"
         >
           {showPassword[field] ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
@@ -351,26 +351,26 @@ export function AccountTab() {
   return (
     <div className="space-y-6">
       <Card className="space-y-8">
-        <h2 className="text-lg font-semibold text-dark">Account Settings</h2>
+        <h2 className="text-lg font-bold text-white">Account Settings</h2>
 
         <div className="space-y-5 max-w-md">
-          <h3 className="font-medium text-dark text-sm">Change Password</h3>
+          <h3 className="font-semibold text-zinc-200 text-sm">Change Password</h3>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
           {passwordField('current', 'current_password', 'Current Password', 'Enter current password')}
           {passwordField('new', 'new_password', 'New Password', 'Enter new password')}
           {passwordField('confirm', 'confirm_password', 'Confirm New Password', 'Confirm new password')}
 
-          <Button onClick={handlePasswordChange} loading={loading}>
+          <Button onClick={handlePasswordChange} loading={loading} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold py-2.5 px-6">
             Update Password
           </Button>
         </div>
       </Card>
 
-      <Card className="space-y-3 border-red-200">
-        <h3 className="font-medium text-red-600">Danger Zone</h3>
-        <p className="text-sm text-muted">This action will sign you out.</p>
+      <Card className="space-y-3 border-red-900/40 bg-[#202023]">
+        <h3 className="font-semibold text-red-400">Danger Zone</h3>
+        <p className="text-sm text-zinc-400">This action will sign you out.</p>
 
         <Button
           variant="danger"
@@ -378,6 +378,7 @@ export function AccountTab() {
             await supabase.auth.signOut()
             window.location.href = '/login'
           }}
+          className="bg-red-800 border border-red-900/50 hover:bg-red-700 font-semibold text-white px-5 py-2.5"
         >
           Logout
         </Button>

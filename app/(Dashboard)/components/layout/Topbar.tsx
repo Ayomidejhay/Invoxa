@@ -63,20 +63,20 @@ export default function Topbar({ email }: { email: string | null }) {
   }
 
   return (
-    <div className="bg-light border-b border-border flex items-center justify-between p-6 print:hidden">
+    <div className="bg-[#1E1E1E] border-b border-zinc-800 flex items-center justify-between p-6 print:hidden">
       <div className="flex items-center gap-4">
         <MobileSidebar />
         <div>
-          <h2 className="font-semibold leading-tight text-dark">{organization.name}</h2>
-          <span className="text-xs text-muted capitalize">{profile.role}</span>
+          <h2 className="font-semibold leading-tight text-white">{organization.name}</h2>
+          <span className="text-xs text-zinc-400 capitalize">{profile.role}</span>
         </div>
       </div>
 
       <div className="flex items-center gap-4">
-        <span className="hidden sm:block text-sm text-muted">
+        <span className="hidden sm:block text-sm text-zinc-400">
           {email}
         </span>
-        <Button size="sm" onClick={handleLogout}>
+        <Button size="sm" onClick={handleLogout} className="border border-zinc-700 bg-zinc-800 text-white hover:bg-zinc-700">
           Logout
         </Button>
       </div>

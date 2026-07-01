@@ -16,12 +16,16 @@ export async function signUp(email: string, password: string, fullName: string) 
   });
 }
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(next?: string) {
   const supabase = getSupabaseClient();
+  const redirectTo = next
+    ? `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`
+    : `${location.origin}/auth/callback`;
+
   return await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${location.origin}/auth/callback`,
+      redirectTo,
     },
   });
 }

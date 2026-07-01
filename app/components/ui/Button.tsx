@@ -7,9 +7,9 @@ type Size = "sm" | "md" | "lg";
 
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary: "bg-deepgreen text-white hover:bg-primary-hover disabled:bg-deepgreen/50",
-  secondary: "bg-primary-soft text-deepgreen hover:bg-lightgreen/30 disabled:opacity-50",
-  outline: "border border-border text-dark hover:bg-gray-50 disabled:opacity-50",
-  ghost: "text-dark hover:bg-gray-100 disabled:opacity-50",
+  secondary: "bg-primary-soft dark:bg-zinc-800 text-deepgreen dark:text-zinc-200 hover:bg-lightgreen/30 dark:hover:bg-zinc-750 disabled:opacity-50",
+  outline: "border border-border dark:border-zinc-700/80 text-dark dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-800 disabled:opacity-50",
+  ghost: "text-dark dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800 disabled:opacity-50",
   danger: "bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300",
 };
 

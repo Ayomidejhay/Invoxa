@@ -278,11 +278,11 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-[#1E1E1E] text-white">
       {confirmDialog}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-dark">Inventory</h1>
+        <h1 className="text-xl font-bold text-white">Inventory</h1>
         <Button
           onClick={() => {
             setSelectedProduct(undefined)
@@ -294,21 +294,23 @@ export default function InventoryPage() {
       </div>
 
       <div className="relative max-w-sm">
-        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
+        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name or SKU..."
-          className="pl-9"
+          className="pl-10 bg-[#202023] border border-zinc-800 text-white rounded-lg placeholder-zinc-500"
         />
       </div>
 
       {loading ? (
         <>
           <div className="md:hidden space-y-4">
-            {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-[#202023] border border-zinc-800 p-4 rounded-xl h-24 animate-pulse" />
+            ))}
           </div>
-          <table className="hidden md:table w-full text-sm bg-white border border-border rounded-xl overflow-hidden">
+          <table className="hidden md:table w-full text-sm bg-[#202023] border border-zinc-850 rounded-xl overflow-hidden">
             <tbody>{Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} columns={5} />)}</tbody>
           </table>
         </>
@@ -332,18 +334,18 @@ export default function InventoryPage() {
           {/* MOBILE VIEW: Cards */}
           <div className="md:hidden space-y-4">
             {pageItems.map((p) => (
-              <div key={p.id} className="bg-white p-4 rounded-xl border border-border shadow-sm">
+              <div key={p.id} className="bg-[#202023] p-4 rounded-xl border border-zinc-800 shadow-sm">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-2 font-bold text-dark">
-                    <FiPackage className="text-deepgreen" />
+                  <div className="flex items-center gap-2 font-bold text-zinc-100">
+                    <FiPackage className="text-[#60A5FA]" />
                     {p.name}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => { setSelectedProduct(p); setModalOpen(true) }} className="text-blue-600 p-2 cursor-pointer">
+                    <button onClick={() => { setSelectedProduct(p); setModalOpen(true) }} className="text-blue-400 p-2 cursor-pointer hover:text-blue-300">
                       <FiEdit2 size={16} />
                     </button>
                     {isOwnerOrAdmin && (
-                      <button onClick={() => handleDelete(p)} className="text-red-600 p-2 cursor-pointer">
+                      <button onClick={() => handleDelete(p)} className="text-red-400 p-2 cursor-pointer hover:text-red-300">
                         <FiTrash2 size={16} />
                       </button>
                     )}
@@ -351,17 +353,17 @@ export default function InventoryPage() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-sm">
-                  <div className="bg-primary-soft p-2 rounded-lg">
-                    <p className="text-deepgreen/70 text-[10px] uppercase font-semibold">Sale</p>
-                    <p className="font-mono font-medium text-dark">{p.sale_price ?? '—'}</p>
+                  <div className="bg-[#1E2D4A]/50 p-2 rounded-lg border border-[#1E2D4A]/30">
+                    <p className="text-blue-400 text-[10px] uppercase font-semibold">Sale</p>
+                    <p className="font-mono font-medium text-white">{p.sale_price ?? '—'}</p>
                   </div>
-                  <div className="bg-rental-soft p-2 rounded-lg">
-                    <p className="text-rental/80 text-[10px] uppercase font-semibold">Rent</p>
-                    <p className="font-mono font-medium text-dark">{p.rental_price ?? '—'}</p>
+                  <div className="bg-[#4C2F1A]/50 p-2 rounded-lg border border-[#4C2F1A]/30">
+                    <p className="text-orange-400 text-[10px] uppercase font-semibold">Rent</p>
+                    <p className="font-mono font-medium text-white">{p.rental_price ?? '—'}</p>
                   </div>
-                  <div className={`p-2 rounded-lg ${p.low_stock_threshold != null && p.stock <= p.low_stock_threshold ? 'bg-red-50' : 'bg-gray-50'}`}>
-                    <p className="text-muted text-[10px] uppercase font-semibold">Stock</p>
-                    <p className={`font-mono font-medium ${p.low_stock_threshold != null && p.stock <= p.low_stock_threshold ? 'text-red-600' : 'text-dark'}`}>
+                  <div className={`p-2 rounded-lg border ${p.low_stock_threshold != null && p.stock <= p.low_stock_threshold ? 'bg-red-950/30 border-red-900/40' : 'bg-zinc-800/80 border-zinc-700/30'}`}>
+                    <p className="text-zinc-400 text-[10px] uppercase font-semibold">Stock</p>
+                    <p className={`font-mono font-medium ${p.low_stock_threshold != null && p.stock <= p.low_stock_threshold ? 'text-red-400' : 'text-white'}`}>
                       {p.stock}
                     </p>
                   </div>
@@ -371,38 +373,38 @@ export default function InventoryPage() {
           </div>
 
           {/* DESKTOP VIEW: Table */}
-          <div className="hidden md:block bg-white border border-border rounded-xl overflow-hidden shadow-sm">
+          <div className="hidden md:block bg-[#202023] border border-zinc-800 rounded-xl overflow-hidden shadow-sm">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-border">
+              <thead className="bg-[#1A1A1C] border-b border-zinc-800">
                 <tr>
-                  <th className="p-4 text-left font-medium text-muted">Name</th>
-                  <th className="p-4 text-left font-medium text-muted">Sale Price</th>
-                  <th className="p-4 text-left font-medium text-muted">Rental Price</th>
-                  <th className="p-4 text-left font-medium text-muted">Stock</th>
-                  <th className="p-4 text-left font-medium text-muted">Actions</th>
+                  <th className="p-4 text-left font-semibold text-zinc-400">Name</th>
+                  <th className="p-4 text-left font-semibold text-zinc-400">Sale Price</th>
+                  <th className="p-4 text-left font-semibold text-zinc-400">Rental Price</th>
+                  <th className="p-4 text-left font-semibold text-zinc-400">Stock</th>
+                  <th className="p-4 text-left font-semibold text-zinc-400">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {pageItems.map((p) => {
                   const lowStock = p.low_stock_threshold != null && p.stock <= p.low_stock_threshold
                   return (
-                    <tr key={p.id} className="border-t border-border hover:bg-gray-50 transition">
-                      <td className="p-4 font-medium text-dark">
+                    <tr key={p.id} className="border-t border-zinc-800/80 hover:bg-zinc-800/30 transition text-zinc-300">
+                      <td className="p-4 font-semibold text-white">
                         {p.name}
-                        {p.sku && <span className="ml-2 text-xs text-muted font-mono">{p.sku}</span>}
+                        {p.sku && <span className="ml-2 text-xs text-zinc-400 font-mono">[{p.sku}]</span>}
                       </td>
-                      <td className="p-4 font-mono text-dark">{p.sale_price != null ? formatCurrency(p.sale_price, organization.currency) : '—'}</td>
-                      <td className="p-4 font-mono text-dark">{p.rental_price != null ? formatCurrency(p.rental_price, organization.currency) : '—'}</td>
+                      <td className="p-4 font-mono text-zinc-200">{p.sale_price != null ? formatCurrency(p.sale_price, organization.currency) : '—'}</td>
+                      <td className="p-4 font-mono text-zinc-200">{p.rental_price != null ? formatCurrency(p.rental_price, organization.currency) : '—'}</td>
                       <td className="p-4">
-                        <span className={`font-mono ${lowStock ? 'text-red-600 font-medium' : 'text-dark'}`}>{p.stock}</span>
-                        {lowStock && <Badge tone="danger" className="ml-2">Low</Badge>}
+                        <span className={`font-mono ${lowStock ? 'text-red-400 font-semibold' : 'text-zinc-200'}`}>{p.stock}</span>
+                        {lowStock && <Badge tone="danger" className="ml-2 bg-red-950/40 text-red-400 border border-red-900/50">Low</Badge>}
                       </td>
-                      <td className="p-4 flex gap-3">
-                        <button onClick={() => { setSelectedProduct(p); setModalOpen(true) }} className="text-blue-600 hover:text-blue-800 cursor-pointer">
+                      <td className="p-4 flex gap-3 items-center">
+                        <button onClick={() => { setSelectedProduct(p); setModalOpen(true) }} className="text-blue-400 hover:text-blue-300 cursor-pointer text-sm">
                           Edit
                         </button>
                         {isOwnerOrAdmin && (
-                          <button onClick={() => handleDelete(p)} className="text-red-600 hover:text-red-800 cursor-pointer">
+                          <button onClick={() => handleDelete(p)} className="text-red-400 hover:text-red-300 cursor-pointer text-sm">
                             Delete
                           </button>
                         )}
@@ -414,7 +416,9 @@ export default function InventoryPage() {
             </table>
           </div>
 
-          <Pagination page={page} pageCount={pageCount} onPageChange={setPage} totalItems={totalItems} pageSize={pageSize} />
+          <div className="mt-4">
+            <Pagination page={page} pageCount={pageCount} onPageChange={setPage} totalItems={totalItems} pageSize={pageSize} />
+          </div>
         </>
       )}
 

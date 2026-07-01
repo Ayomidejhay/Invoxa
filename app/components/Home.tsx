@@ -346,6 +346,48 @@ const features = [
   },
 ];
 
+const row1Variants = {
+  hidden: { opacity: 0, y: 15 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 80,
+      damping: 12,
+      delay: 0.2,
+    },
+  },
+} as const;
+
+const row2Variants = {
+  hidden: { opacity: 0, y: 15 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 80,
+      damping: 12,
+      delay: 0.4,
+    },
+  },
+} as const;
+
+const row3Variants = {
+  hidden: { opacity: 0, y: 15 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 80,
+      damping: 12,
+      delay: 0.6,
+    },
+  },
+} as const;
+
 function InvoicePreviewCard({
   type,
   number,
@@ -355,6 +397,7 @@ function InvoicePreviewCard({
   status,
   statusTone,
   rotate,
+  animateRows = false,
 }: {
   type: "Sale" | "Rental";
   number: string;
@@ -364,13 +407,70 @@ function InvoicePreviewCard({
   status: string;
   statusTone: "green" | "blue";
   rotate: string;
+  animateRows?: boolean;
 }) {
   const isSale = type === "Sale";
+
+  if (animateRows) {
+    return (
+      <div
+        style={{ transform: rotate }}
+        className="w-64 bg-white border border-border rounded-2xl shadow-xl p-5 space-y-4"
+      >
+        {/* Row 1 */}
+        <motion.div
+          variants={row1Variants}
+          initial="hidden"
+          animate="show"
+          className="flex items-center justify-between"
+        >
+          <span
+            className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full ${
+              isSale ? "bg-primary-soft text-deepgreen" : "bg-rental-soft text-rental"
+            }`}
+          >
+            {type}
+          </span>
+          <span
+            className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full ${
+              statusTone === "green" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+            }`}
+          >
+            {status}
+          </span>
+        </motion.div>
+
+        {/* Row 2 */}
+        <motion.div
+          variants={row2Variants}
+          initial="hidden"
+          animate="show"
+          className="flex justify-between items-center gap-2"
+        >
+          <p className="font-mono text-xs text-muted truncate">{number}</p>
+          <p className="font-semibold text-dark truncate text-right">{customer}</p>
+        </motion.div>
+
+        {/* Row 3 */}
+        <motion.div
+          variants={row3Variants}
+          initial="hidden"
+          animate="show"
+          className="border-t border-border pt-3 flex justify-between items-end gap-2"
+        >
+          <p className="text-xs text-muted truncate">{line}</p>
+          <p className="font-mono text-lg font-bold text-dark truncate text-right">{total}</p>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{ transform: rotate }}
       className="w-64 bg-white border border-border rounded-2xl shadow-xl p-5 space-y-4"
     >
+      {/* Row 1 */}
       <div className="flex items-center justify-between">
         <span
           className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full ${
@@ -388,14 +488,16 @@ function InvoicePreviewCard({
         </span>
       </div>
 
-      <div>
-        <p className="font-mono text-xs text-muted">{number}</p>
-        <p className="font-semibold text-dark">{customer}</p>
+      {/* Row 2 */}
+      <div className="flex justify-between items-center gap-2">
+        <p className="font-mono text-xs text-muted truncate">{number}</p>
+        <p className="font-semibold text-dark truncate text-right">{customer}</p>
       </div>
 
-      <div className="border-t border-border pt-3 space-y-1">
-        <p className="text-xs text-muted">{line}</p>
-        <p className="font-mono text-lg font-bold text-dark">{total}</p>
+      {/* Row 3 */}
+      <div className="border-t border-border pt-3 flex justify-between items-end gap-2">
+        <p className="text-xs text-muted truncate">{line}</p>
+        <p className="font-mono text-lg font-bold text-dark truncate text-right">{total}</p>
       </div>
     </div>
   );
@@ -460,6 +562,7 @@ export default function MainHome() {
                 status="Paid"
                 statusTone="green"
                 rotate="rotate(-6deg)"
+                animateRows={true}
               />
             </div>
             <div className="absolute right-2 top-0">
@@ -472,6 +575,7 @@ export default function MainHome() {
                 status="Sent"
                 statusTone="blue"
                 rotate="rotate(4deg)"
+                animateRows={true}
               />
             </div>
           </motion.div>

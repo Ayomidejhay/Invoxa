@@ -1,19 +1,26 @@
+
+
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import html2canvas from "html2canvas-pro";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useOrganization } from "../../components/OrganizationProvider";
 import type { InvoiceStatus, InvoiceType } from "@/lib/supabase/database.types";
 import { Button } from "@/app/components/ui/Button";
+import { Modal } from "@/app/components/ui/Modal";
+import { Input } from "@/app/components/ui/Input";
+import { Textarea } from "@/app/components/ui/Textarea";
 import { useConfirm } from "@/app/components/ui/useConfirm";
 import { useToast } from "@/app/components/ui/Toast";
 import { formatCurrency } from "@/lib/format";
+import type { Payment } from "@/lib/supabase/database.types";
 
 // ---------------- TYPES ----------------
-type Customer = { name: string; email?: string | null; phone?: string | null };
+type Customer = { name: string; email?: string; phone?: string };
 
 type Invoice = {
   id: string;
@@ -21,12 +28,13 @@ type Invoice = {
   type: InvoiceType;
   status: InvoiceStatus;
   total: number;
+  amount_paid: number;
   currency?: string | null;
   notes?: string | null;
   created_at: string;
   issue_date?: string | null;
   due_date?: string | null;
-  customers?: Customer | null;
+  customers?: Customer;
   start_date?: string | null;
   end_date?: string | null;
 };
@@ -70,6 +78,7 @@ function PrintStatusBadge({ status }: { status: InvoiceStatus }) {
   const styles: Record<InvoiceStatus, { background: string; color: string }> = {
     draft: { background: "#F1F5F9", color: "#475569" },
     sent: { background: "#DBEAFE", color: "#1D4ED8" },
+    partial: { background: "#E0E7FF", color: "#4338CA" },
     paid: { background: "#DCFCE7", color: "#15803D" },
     overdue: { background: "#FEF3C7", color: "#B45309" },
     void: { background: "#FEE2E2", color: "#B91C1C" },
@@ -93,31 +102,61 @@ export default function InvoiceDetailPage() {
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState(false);
   const [voiding, setVoiding] = useState(false);
+
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentNote, setPaymentNote] = useState("");
+  const [recordingPayment, setRecordingPayment] = useState(false);
+
+  const loadInvoice = async () => {
+    const { data: inv } = await supabase
+      .from("invoices")
+      .select("*, customers(name, email, phone)")
+      .eq("id", id)
+      .single();
+
+    const { data: itemData } = await supabase
+      .from("invoice_items")
+      .select("*")
+      .eq("invoice_id", id)
+      .order("created_at", { ascending: true });
+
+    const { data: paymentData } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("invoice_id", id)
+      .order("created_at", { ascending: false });
+
+    // Normalize nullable fields from Supabase (which may be null) to match our Invoice type
+    // where customer fields expect undefined instead of null
+    const normalizedInv: Invoice | null = inv
+      ? {
+          ...inv,
+          customers: inv.customers
+            ? {
+                ...inv.customers,
+                email: inv.customers.email ?? undefined,
+                phone: inv.customers.phone ?? undefined,
+              }
+            : undefined,
+        }
+      : null;
+
+    setInvoice(normalizedInv);
+    setItems(itemData || []);
+    setPayments(paymentData || []);
+  };
 
   useEffect(() => {
     let isMounted = true
 
     const load = async () => {
-      const { data: inv } = await supabase
-        .from("invoices")
-        .select("*, customers(name, email, phone)")
-        .eq("id", id)
-        .single();
-
-      const { data: itemData } = await supabase
-        .from("invoice_items")
-        .select("*")
-        .eq("invoice_id", id)
-        .order("created_at", { ascending: true });
-
-      if (isMounted) {
-        setInvoice(inv);
-        setItems(itemData || []);
-        setLoading(false);
-      }
+      setLoading(true);
+      await loadInvoice();
+      if (isMounted) setLoading(false);
     };
 
     if (id) load();
@@ -125,45 +164,73 @@ export default function InvoiceDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [id, supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const grandTotal = useMemo(() => {
     return items.reduce((s, it) => s + (it.total_price || 0), 0);
   }, [items]);
 
-  const markAsPaid = async () => {
-    if (!invoice || invoice.status === "paid") return;
+  if (loading || !invoice) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <span className="h-6 w-6 rounded-full border-2 border-deepgreen border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
-    const ok = await confirm({
-      title: "Mark this invoice as paid?",
-      description: invoice.type === "sale" ? "This will deduct the sold items from stock." : undefined,
-      confirmLabel: "Mark as Paid",
+  const isRental = invoice.type === "rental";
+  const currency = invoice.currency || org.currency || "NGN";
+  const balanceDue = invoice.total - invoice.amount_paid;
+
+  const openPaymentModal = () => {
+    const remaining = invoice.total - invoice.amount_paid;
+    // First payment on this invoice: suggest the org's default deposit %
+    // if one is set, otherwise suggest the full remaining balance.
+    const suggested =
+      invoice.amount_paid === 0 && org.default_deposit_percentage
+        ? Math.round(invoice.total * (org.default_deposit_percentage / 100) * 100) / 100
+        : remaining;
+    setPaymentAmount(suggested.toString());
+    setPaymentNote("");
+    setPaymentModalOpen(true);
+  };
+
+  const submitPayment = async () => {
+    const amount = Number(paymentAmount);
+    if (!amount || amount <= 0) {
+      toast.error("Enter a valid payment amount");
+      return;
+    }
+    if (amount > balanceDue + 0.01) {
+      toast.error(`That exceeds the remaining balance of ${formatCurrency(balanceDue, currency)}`);
+      return;
+    }
+
+    setRecordingPayment(true);
+    const { error } = await supabase.rpc("record_payment", {
+      p_invoice_id: invoice.id,
+      p_amount: amount,
+      p_note: paymentNote || null,
     });
-    if (!ok) return;
-
-    setPaying(true);
-
-    // Single atomic RPC: flips status to paid AND decrements stock (for
-    // sales) under a row lock — no more client-side loop of separate
-    // decrease_stock calls that could partially fail.
-    const { error } = await supabase.rpc("mark_invoice_paid", { p_invoice_id: invoice.id });
-
-    setPaying(false);
+    setRecordingPayment(false);
 
     if (error) {
       toast.error(error.message);
       return;
     }
-    setInvoice({ ...invoice, status: "paid" });
-    toast.success("Invoice marked as paid");
+
+    setPaymentModalOpen(false);
+    toast.success(amount >= balanceDue - 0.01 ? "Invoice marked as paid" : "Payment recorded");
+    loadInvoice();
   };
 
   const voidInvoice = async () => {
-    if (!invoice || invoice.status === "void") return;
+    if (invoice.status === "void") return;
 
     const ok = await confirm({
       title: "Void this invoice?",
-      description: "If it was already paid, stock will be restored.",
+      description: invoice.amount_paid > 0 ? "Stock will be restored, but recorded payments stay on file." : undefined,
       confirmLabel: "Void Invoice",
       tone: "danger",
     });
@@ -183,21 +250,14 @@ export default function InvoiceDetailPage() {
     toast.success("Invoice voided");
   };
 
-  if (loading || !invoice) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <span className="h-6 w-6 rounded-full border-2 border-deepgreen border-t-transparent animate-spin" />
-      </div>
-    );
-  }
-
-  const isRental = invoice.type === "rental";
-  const currency = invoice.currency || org.currency || "NGN";
-
   const downloadPDF = async () => {
     const element = document.getElementById("invoice");
 
     if (!element) return;
+
+    // Find the scrollable container (the main dashboard wrapper)
+    const scrollContainer = element.closest(".overflow-y-auto");
+    const originalScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
 
     // Save original style properties to restore later
     const originalWidth = element.style.width;
@@ -208,6 +268,11 @@ export default function InvoiceDetailPage() {
     element.style.width = "850px";
     element.style.maxWidth = "none";
     element.style.padding = "48px";
+
+    // Temporarily scroll to the top of the container to prevent any vertical scroll clipping
+    if (scrollContainer) {
+      scrollContainer.scrollTop = 0;
+    }
 
     try {
       const canvas = await html2canvas(element, {
@@ -220,7 +285,11 @@ export default function InvoiceDetailPage() {
         // standard fix for the ₦ (Naira) glyph overlapping adjacent
         // digits, which is a width-calculation bug in html2canvas's own
         // text rasterizer, not a font issue.
-        // letterRendering: true,
+        // @ts-expect-error: letterRendering exists at runtime though missing in types
+        letterRendering: true,
+        // We scrolled the container to the top, so we don't need scroll offsets anymore.
+        scrollX: 0,
+        scrollY: 0,
       });
 
       const imgData = canvas.toDataURL("image/png");
@@ -244,14 +313,35 @@ export default function InvoiceDetailPage() {
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`invoice-${invoice.invoice_number || invoice.id.slice(0, 8)}.pdf`);
+      const safeInvoiceNumber = (invoice.invoice_number || invoice.id.slice(0, 8))
+        .replace(/[^a-zA-Z0-9-_\s.]/g, "_");
+
+      pdf.save(`invoice-${safeInvoiceNumber}.pdf`);
     } catch (err) {
       console.error("Failed to generate PDF", err);
+      const errMsg = err instanceof Error ? err.stack || err.message : String(err);
+      const errorDiv = document.createElement("div");
+      errorDiv.id = "pdf-debug-error";
+      errorDiv.style.position = "fixed";
+      errorDiv.style.top = "10px";
+      errorDiv.style.left = "10px";
+      errorDiv.style.right = "10px";
+      errorDiv.style.background = "red";
+      errorDiv.style.color = "white";
+      errorDiv.style.padding = "20px";
+      errorDiv.style.zIndex = "999999";
+      errorDiv.style.fontFamily = "monospace";
+      errorDiv.style.whiteSpace = "pre-wrap";
+      errorDiv.innerText = "PDF Error:\n" + errMsg;
+      document.body.appendChild(errorDiv);
     } finally {
-      // Restore original styling
+      // Restore original styling and scroll position
       element.style.width = originalWidth;
       element.style.maxWidth = originalMaxWidth;
       element.style.padding = originalPadding;
+      if (scrollContainer) {
+        scrollContainer.scrollTop = originalScrollTop;
+      }
     }
   };
 
@@ -294,6 +384,7 @@ export default function InvoiceDetailPage() {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={org.logo_url}
+                crossOrigin="anonymous"
                 alt="logo"
                 className="h-16 w-16 object-cover rounded-xl border border-[#e2e8f0] shadow-sm"
               />
@@ -419,14 +510,14 @@ export default function InvoiceDetailPage() {
                       {it.name || "Product"}
                       {isRental && (
                         <p className="text-xs font-normal mt-0.5" style={{ color: "#94a3b8" }}>
-                          {formatCurrency(it.unit_price, currency)}/day × {it.quantity} × {days || 1} days
+                          {formatCurrency(it.unit_price, currency, { forCanvas: true })}/day × {it.quantity} × {days || 1} days
                         </p>
                       )}
                     </td>
                     {isRental && <td className="p-3 text-center font-mono" style={{ color: "#64748b" }}>{days || "-"}</td>}
                     <td className="p-3 text-center font-mono" style={{ color: "#64748b" }}>{it.quantity}</td>
-                    <td className="p-3 text-right font-mono" style={{ color: "#64748b" }}>{formatCurrency(it.unit_price, currency)}</td>
-                    <td className="p-3 text-right font-semibold font-mono" style={{ color: "#020617" }}>{formatCurrency(it.total_price, currency)}</td>
+                    <td className="p-3 text-right font-mono" style={{ color: "#64748b" }}>{formatCurrency(it.unit_price, currency, { forCanvas: true })}</td>
+                    <td className="p-3 text-right font-semibold font-mono" style={{ color: "#020617" }}>{formatCurrency(it.total_price, currency, { forCanvas: true })}</td>
                   </tr>
                 );
               })}
@@ -439,15 +530,30 @@ export default function InvoiceDetailPage() {
           <div className="w-full max-w-xs space-y-2.5 text-sm">
             <div className="flex justify-between" style={{ color: "#64748b" }}>
               <span>Subtotal</span>
-              <span className="font-mono" style={{ color: "#334155" }}>{formatCurrency(grandTotal, currency)}</span>
+              <span className="font-mono" style={{ color: "#334155" }}>{formatCurrency(grandTotal, currency, { forCanvas: true })}</span>
             </div>
             <div
               className="flex justify-between font-bold text-base pt-2.5"
               style={{ color: "#0f172a", borderTop: "1px solid #e2e8f0" }}
             >
               <span>Total</span>
-              <span className="font-mono" style={{ color: "#020617" }}>{formatCurrency(invoice.total ?? grandTotal, currency)}</span>
+              <span className="font-mono" style={{ color: "#020617" }}>{formatCurrency(invoice.total ?? grandTotal, currency, { forCanvas: true })}</span>
             </div>
+            {invoice.amount_paid > 0 && (
+              <>
+                <div className="flex justify-between" style={{ color: "#16A34A" }}>
+                  <span>Amount Paid</span>
+                  <span className="font-mono">{formatCurrency(invoice.amount_paid, currency, { forCanvas: true })}</span>
+                </div>
+                <div
+                  className="flex justify-between font-bold pt-2"
+                  style={{ color: balanceDue > 0 ? "#B45309" : "#16A34A", borderTop: "1px dashed #e2e8f0" }}
+                >
+                  <span>Balance Due</span>
+                  <span className="font-mono">{formatCurrency(balanceDue, currency, { forCanvas: true })}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -496,6 +602,30 @@ export default function InvoiceDetailPage() {
 
       {confirmDialog}
 
+      {/* Payment history — internal record-keeping, not shown on the printable invoice */}
+      {payments.length > 0 && (
+        <div className="bg-[#202023] border border-zinc-800 rounded-2xl p-6 print:hidden">
+          <h3 className="text-sm font-semibold text-white mb-4">Payment History</h3>
+          <div className="divide-y divide-zinc-850">
+            {payments.map((p) => (
+              <div key={p.id} className="flex items-center justify-between py-3 text-sm border-b border-zinc-850/50 last:border-b-0">
+                <div>
+                  <p className="text-white font-medium">{formatCurrency(p.amount, currency)}</p>
+                  {p.note && <p className="text-zinc-400 text-xs mt-0.5">{p.note}</p>}
+                </div>
+                <span className="text-zinc-400 text-xs">
+                  {new Date(p.created_at).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Actions (hidden on print) */}
       <div className="flex justify-end gap-3 print:hidden">
         <Button variant="outline" onClick={() => window.print()}>
@@ -513,26 +643,84 @@ export default function InvoiceDetailPage() {
         )}
 
         {invoice.status !== "paid" && invoice.status !== "void" && (
-          <Button onClick={markAsPaid} loading={paying}>
-            Mark as Paid
+          <Button onClick={openPaymentModal} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold px-4 py-2.5">
+            Record Payment
           </Button>
         )}
       </div>
 
+      {/* Record Payment Modal */}
+      <Modal open={paymentModalOpen} onClose={() => setPaymentModalOpen(false)} title="Record Payment" size="sm">
+        <div className="space-y-4 text-zinc-300">
+          <p className="text-sm text-zinc-400">
+            Balance due: <span className="font-mono font-bold text-white">{formatCurrency(balanceDue, currency, { forCanvas: true })}</span>
+          </p>
+          <Input
+            label="Amount received"
+            type="number"
+            min="0"
+            step="0.01"
+            value={paymentAmount}
+            onChange={(e) => setPaymentAmount(e.target.value)}
+            hint={
+              invoice.amount_paid === 0 && org.default_deposit_percentage
+                ? `Prefilled at your default deposit of ${org.default_deposit_percentage}% — change as needed`
+                : undefined
+            }
+            className="bg-[#202023] border-zinc-800 text-white"
+          />
+          <Textarea
+            label="Note (optional)"
+            placeholder="e.g. Cash deposit, bank transfer ref..."
+            value={paymentNote}
+            onChange={(e) => setPaymentNote(e.target.value)}
+            rows={2}
+            className="bg-[#202023] border-zinc-800 text-white"
+          />
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setPaymentModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitPayment} loading={recordingPayment} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold px-4 py-2.5">
+              Record Payment
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Print tweaks */}
       <style jsx global>{`
         @media print {
-          body {
-            background: #fff;
+          body, html {
+            background: #fff !important;
+            height: auto !important;
+            overflow: visible !important;
           }
-          .print\:hidden {
+          /* Hide sidebars, navigation, and top bars */
+          aside, header, nav, .print\:hidden {
             display: none !important;
+          }
+          /* Reset viewport-locked height and scroll constraints */
+          .h-screen, [class*="h-screen"],
+          .overflow-y-auto, [class*="overflow-y-auto"] {
+            height: auto !important;
+            overflow: visible !important;
+          }
+          /* Expand layouts to print at full width without sidebar offsets */
+          div, main, section {
+            height: auto !important;
+            overflow: visible !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
           }
           #invoice {
             border: none !important;
             box-shadow: none !important;
             padding: 0 !important;
             margin: 0 !important;
+            overflow: visible !important;
           }
         }
       `}</style>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 export function usePagination<T>(items: T[], pageSize = 10) {
   const [page, setPage] = useState(1);
@@ -8,14 +8,15 @@ export function usePagination<T>(items: T[], pageSize = 10) {
 
   // Snap back to a valid page if the underlying list shrinks (e.g. after a
   // delete or a search filter narrows the results).
-  useEffect(() => {
-    if (page > pageCount) setPage(pageCount);
-  }, [page, pageCount]);
+  const currentPage = Math.min(page, pageCount);
+  if (page > pageCount) {
+    setPage(pageCount);
+  }
 
   const pageItems = useMemo(() => {
-    const start = (page - 1) * pageSize;
+    const start = (currentPage - 1) * pageSize;
     return items.slice(start, start + pageSize);
-  }, [items, page, pageSize]);
+  }, [items, currentPage, pageSize]);
 
-  return { page, setPage, pageCount, pageItems, totalItems: items.length, pageSize };
+  return { page: currentPage, setPage, pageCount, pageItems, totalItems: items.length, pageSize };
 }

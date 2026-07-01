@@ -5,6 +5,12 @@
 // import { useState } from "react";
 // import { getSupabaseClient } from "@/lib/supabase/client";
 // import { useOrganization } from "../../components/OrganizationProvider";
+// import { Card } from "@/app/components/ui/Card";
+// import { Input } from "@/app/components/ui/Input";
+// import { Select } from "@/app/components/ui/Select";
+// import { Textarea } from "@/app/components/ui/Textarea";
+// import { Button } from "@/app/components/ui/Button";
+// import { useToast } from "@/app/components/ui/Toast";
 
 // const currencies = [
 //   { code: "NGN", label: "Nigerian Naira" },
@@ -19,10 +25,10 @@
 // export function InvoiceTab() {
 //   const supabase = getSupabaseClient();
 //   const { organization } = useOrganization();
+//   const toast = useToast();
 
 //   const [saving, setSaving] = useState(false);
 //   const [error, setError] = useState<string | null>(null);
-//   const [success, setSuccess] = useState<string | null>(null);
 
 //   const [form, setForm] = useState({
 //     currency: organization.currency || "NGN",
@@ -45,7 +51,6 @@
 
 //     setSaving(true);
 //     setError(null);
-//     setSuccess(null);
 
 //     try {
 //       const { error } = await supabase
@@ -55,8 +60,7 @@
 
 //       if (error) throw error;
 
-//       setSuccess("Invoice settings updated successfully!");
-//       setTimeout(() => setSuccess(null), 3000);
+//       toast.success("Invoice settings updated");
 //     } catch (err) {
 //       const message = err instanceof Error ? err.message : "Update failed";
 //       setError(message);
@@ -66,94 +70,53 @@
 //   };
 
 //   return (
-//     <form
-//       onSubmit={handleSubmit}
-//       noValidate
-//       className="bg-white p-6 rounded-2xl shadow-sm space-y-6 relative"
-//     >
-//       <h2 className="text-lg font-semibold">Invoice Settings</h2>
+//     <Card className="space-y-6">
+//       <form onSubmit={handleSubmit} noValidate className="space-y-6">
+//         <h2 className="text-lg font-semibold text-dark">Invoice Settings</h2>
 
-//       {error && <p className="text-sm text-red-500">{error}</p>}
+//         {error && <p className="text-sm text-red-600">{error}</p>}
 
-//       {success && (
-//         <div className="absolute top-2 right-2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md">
-//           {success}
-//         </div>
-//       )}
-
-//       <div className="grid md:grid-cols-2 gap-4">
-//         <div className="flex flex-col gap-1">
-//           <label>Default Currency</label>
-//           <select
-//             name="currency"
-//             value={form.currency}
-//             onChange={handleChange}
-//             className="border p-3 rounded-lg"
-//           >
+//         <div className="grid md:grid-cols-2 gap-4">
+//           <Select label="Default Currency" name="currency" value={form.currency} onChange={handleChange}>
 //             <option value="">Select Currency</option>
 //             {currencies.map((currency) => (
 //               <option key={currency.code} value={currency.code}>
 //                 {currency.code} - {currency.label}
 //               </option>
 //             ))}
-//           </select>
+//           </Select>
+
+//           <Input label="Invoice Prefix" name="invoice_prefix" value={form.invoice_prefix} onChange={handleChange} />
 //         </div>
 
-//         <div className="flex flex-col gap-1">
-//           <label>Invoice Prefix</label>
-//           <input
-//             name="invoice_prefix"
-//             value={form.invoice_prefix}
-//             onChange={handleChange}
-//             className="border p-3 rounded-lg"
-//           />
-//         </div>
-//       </div>
-
-//       <div className="flex flex-col gap-1">
-//         <label>Payment Terms</label>
-//         <textarea
+//         <Textarea
+//           label="Payment Terms"
 //           name="payment_terms"
 //           value={form.payment_terms}
 //           onChange={handleChange}
-//           className="border p-3 rounded-lg w-full"
 //         />
-//       </div>
 
-//       <h3 className="font-medium">Bank Details</h3>
+//         <h3 className="font-medium text-dark text-sm">Bank Details</h3>
 
-//       <div className="grid md:grid-cols-2 gap-4">
-//         {[
-//           { name: "bank_name" as const, label: "Bank Name" },
-//           { name: "account_name" as const, label: "Account Name" },
-//           { name: "account_number" as const, label: "Account Number" },
-//         ].map((field) => (
-//           <div key={field.name} className="flex flex-col gap-1">
-//             <label>{field.label}</label>
-//             <input
-//               name={field.name}
-//               value={form[field.name]}
-//               onChange={handleChange}
-//               className="border p-3 rounded-lg"
-//             />
-//           </div>
-//         ))}
-//       </div>
+//         <div className="grid md:grid-cols-2 gap-4">
+//           <Input label="Bank Name" name="bank_name" value={form.bank_name} onChange={handleChange} />
+//           <Input label="Account Name" name="account_name" value={form.account_name} onChange={handleChange} />
+//           <Input label="Account Number" name="account_number" value={form.account_number} onChange={handleChange} />
+//         </div>
 
-//       <button
-//         type="submit"
-//         disabled={saving}
-//         className="bg-deepgreen text-white px-6 py-2 rounded-lg disabled:opacity-50"
-//       >
-//         {saving ? "Saving..." : "Save Settings"}
-//       </button>
-//     </form>
+//         <Button type="submit" loading={saving}>
+//           Save Settings
+//         </Button>
+//       </form>
+//     </Card>
 //   );
 // }
+
 
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useOrganization } from "../../components/OrganizationProvider";
 import { Card } from "@/app/components/ui/Card";
@@ -175,6 +138,7 @@ const currencies = [
 
 export function InvoiceTab() {
   const supabase = getSupabaseClient();
+  const router = useRouter();
   const { organization } = useOrganization();
   const toast = useToast();
 
@@ -188,6 +152,7 @@ export function InvoiceTab() {
     bank_name: organization.bank_name || "",
     account_name: organization.account_name || "",
     account_number: organization.account_number || "",
+    default_deposit_percentage: organization.default_deposit_percentage?.toString() || "",
   });
 
   const handleChange = (
@@ -203,15 +168,36 @@ export function InvoiceTab() {
     setSaving(true);
     setError(null);
 
+    const depositPct = form.default_deposit_percentage.trim();
+    if (depositPct && (Number(depositPct) < 0 || Number(depositPct) > 100 || Number.isNaN(Number(depositPct)))) {
+      setError("Deposit percentage must be a number between 0 and 100");
+      setSaving(false);
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("organizations")
-        .update(form)
+        .update({
+          currency: form.currency,
+          invoice_prefix: form.invoice_prefix,
+          payment_terms: form.payment_terms,
+          bank_name: form.bank_name,
+          account_name: form.account_name,
+          account_number: form.account_number,
+          default_deposit_percentage: depositPct ? Number(depositPct) : null,
+        })
         .eq("id", organization.id);
 
       if (error) throw error;
 
       toast.success("Invoice settings updated");
+      // The organization shown everywhere else in the app (dashboard, lists,
+      // invoice creation) comes from the (Dashboard) layout's Server
+      // Component fetch, cached in OrganizationProvider — without this, a
+      // currency/setting change here wouldn't show up anywhere else until a
+      // hard reload.
+      router.refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Update failed";
       setError(message);
@@ -223,21 +209,27 @@ export function InvoiceTab() {
   return (
     <Card className="space-y-6">
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
-        <h2 className="text-lg font-semibold text-dark">Invoice Settings</h2>
+        <h2 className="text-lg font-bold text-white">Invoice Settings</h2>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-400">{error}</p>}
 
         <div className="grid md:grid-cols-2 gap-4">
-          <Select label="Default Currency" name="currency" value={form.currency} onChange={handleChange}>
-            <option value="">Select Currency</option>
+          <Select
+            label="Default Currency"
+            name="currency"
+            value={form.currency}
+            onChange={handleChange}
+            className="bg-[#202023] border-zinc-800 text-white"
+          >
+            <option value="" className="bg-[#202023] text-white">Select Currency</option>
             {currencies.map((currency) => (
-              <option key={currency.code} value={currency.code}>
+              <option key={currency.code} value={currency.code} className="bg-[#202023] text-white">
                 {currency.code} - {currency.label}
               </option>
             ))}
           </Select>
 
-          <Input label="Invoice Prefix" name="invoice_prefix" value={form.invoice_prefix} onChange={handleChange} />
+          <Input label="Invoice Prefix" name="invoice_prefix" value={form.invoice_prefix} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
         </div>
 
         <Textarea
@@ -245,17 +237,41 @@ export function InvoiceTab() {
           name="payment_terms"
           value={form.payment_terms}
           onChange={handleChange}
+          className="bg-[#202023] border-zinc-800 text-white"
         />
 
-        <h3 className="font-medium text-dark text-sm">Bank Details</h3>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <Input label="Bank Name" name="bank_name" value={form.bank_name} onChange={handleChange} />
-          <Input label="Account Name" name="account_name" value={form.account_name} onChange={handleChange} />
-          <Input label="Account Number" name="account_number" value={form.account_number} onChange={handleChange} />
+        <div className="border-t border-zinc-800/80 pt-4">
+          <h3 className="font-semibold text-white text-sm mb-1">Part Payments</h3>
+          <p className="text-xs text-zinc-400 mb-3">
+            Suggested deposit when recording a customer&apos;s first payment on an invoice — shown as a
+            prefilled amount, not enforced. Staff can still record any amount.
+          </p>
+          <Input
+            label="Default deposit percentage"
+            name="default_deposit_percentage"
+            type="number"
+            min="0"
+            max="100"
+            step="1"
+            placeholder="e.g. 50"
+            value={form.default_deposit_percentage}
+            onChange={handleChange}
+            hint="Leave blank to default to the full balance"
+            className="max-w-xs bg-[#202023] border-zinc-800 text-white"
+          />
         </div>
 
-        <Button type="submit" loading={saving}>
+        <div className="border-t border-zinc-800/80 pt-4">
+          <h3 className="font-semibold text-white text-sm mb-3">Bank Details</h3>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <Input label="Bank Name" name="bank_name" value={form.bank_name} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
+            <Input label="Account Name" name="account_name" value={form.account_name} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
+            <Input label="Account Number" name="account_number" value={form.account_number} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
+          </div>
+        </div>
+
+        <Button type="submit" loading={saving} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold px-6 py-2.5">
           Save Settings
         </Button>
       </form>

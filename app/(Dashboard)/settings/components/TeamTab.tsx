@@ -410,24 +410,24 @@ export function TeamTab() {
     <Card className="space-y-8">
       {confirmDialog}
 
-      <h2 className="text-lg font-semibold text-dark">Team</h2>
+      <h2 className="text-lg font-bold text-white">Team</h2>
 
       <div className="space-y-3">
-        <h3 className="font-medium text-sm text-muted">Members</h3>
-        <div className="divide-y divide-border border border-border rounded-xl overflow-hidden">
+        <h3 className="font-medium text-sm text-zinc-400">Members</h3>
+        <div className="divide-y divide-zinc-850 border border-zinc-800 rounded-xl overflow-hidden bg-zinc-900/30">
           {loading ? (
-            <table className="w-full">
+            <table className="w-full animate-pulse">
               <tbody>{Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} columns={3} />)}</tbody>
             </table>
           ) : (
             members.map((member) => (
-              <div key={member.id} className="flex items-center justify-between p-4">
+              <div key={member.id} className="flex items-center justify-between p-4 border-b border-zinc-850 last:border-b-0">
                 <div>
-                  <p className="font-medium text-dark">
+                  <p className="font-semibold text-white">
                     {member.full_name || member.email}
-                    {member.id === me.id && <span className="text-muted"> (you)</span>}
+                    {member.id === me.id && <span className="text-zinc-500 font-normal"> (you)</span>}
                   </p>
-                  <p className="text-sm text-muted">{member.email}</p>
+                  <p className="text-sm text-zinc-400 font-mono mt-0.5">{member.email}</p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -435,19 +435,19 @@ export function TeamTab() {
                     <Select
                       value={member.role}
                       onChange={(e) => handleRoleChange(member.id, e.target.value as "admin" | "staff")}
-                      className="w-auto py-1.5 text-xs capitalize"
+                      className="w-auto py-1 text-xs capitalize bg-[#202023] border-zinc-800 text-white"
                     >
-                      <option value="admin">Admin</option>
-                      <option value="staff">Staff</option>
+                      <option value="admin" className="bg-[#202023] text-white">Admin</option>
+                      <option value="staff" className="bg-[#202023] text-white">Staff</option>
                     </Select>
                   ) : (
-                    <span className="text-sm text-muted capitalize px-2">{member.role}</span>
+                    <span className="text-sm text-zinc-400 capitalize px-2 font-medium">{member.role}</span>
                   )}
 
                   {isOwnerOrAdmin && member.role !== "owner" && member.id !== me.id && (
                     <button
                       onClick={() => handleRemove(member)}
-                      className="text-sm text-red-600 hover:underline cursor-pointer"
+                      className="text-sm text-red-400 hover:text-red-300 cursor-pointer transition-colors"
                     >
                       Remove
                     </button>
@@ -460,28 +460,28 @@ export function TeamTab() {
       </div>
 
       {isOwnerOrAdmin && (
-        <div className="space-y-3">
-          <h3 className="font-medium text-sm text-muted">Pending invites</h3>
+        <div className="space-y-3 pt-2 border-t border-zinc-800/80">
+          <h3 className="font-semibold text-white text-sm">Pending invites</h3>
           {invites.length === 0 ? (
-            <p className="text-sm text-muted">No pending invites.</p>
+            <p className="text-sm text-zinc-400">No pending invites.</p>
           ) : (
-            <div className="divide-y divide-border border border-border rounded-xl overflow-hidden">
+            <div className="divide-y divide-zinc-850 border border-zinc-800 rounded-xl overflow-hidden bg-zinc-900/30">
               {invites.map((invite) => (
-                <div key={invite.id} className="flex items-center justify-between p-4">
+                <div key={invite.id} className="flex items-center justify-between p-4 border-b border-zinc-850 last:border-b-0">
                   <div>
-                    <p className="font-medium text-dark">{invite.email}</p>
-                    <p className="text-sm text-muted capitalize">{invite.role}</p>
+                    <p className="font-semibold text-white">{invite.email}</p>
+                    <p className="text-xs text-zinc-400 capitalize font-mono mt-0.5">{invite.role}</p>
                   </div>
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => handleCopyLink(invite.token)}
-                      className="text-sm text-deepgreen hover:underline cursor-pointer"
+                      className="text-sm text-blue-400 hover:text-blue-300 cursor-pointer transition-colors"
                     >
                       Copy link
                     </button>
                     <button
                       onClick={() => handleRevoke(invite)}
-                      className="text-sm text-red-600 hover:underline cursor-pointer"
+                      className="text-sm text-red-400 hover:text-red-300 cursor-pointer transition-colors"
                     >
                       Revoke
                     </button>
@@ -491,7 +491,7 @@ export function TeamTab() {
             </div>
           )}
 
-          <form onSubmit={handleInvite} className="flex flex-wrap items-end gap-3 pt-2">
+          <form onSubmit={handleInvite} className="flex flex-wrap items-end gap-3 pt-4">
             <div className="flex-1 min-w-[200px]">
               <Input
                 label="Invite by email"
@@ -499,22 +499,23 @@ export function TeamTab() {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="teammate@company.com"
+                className="bg-[#202023] border-zinc-800 text-white"
               />
             </div>
             <Select
               label="Role"
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as "admin" | "staff")}
-              className="w-auto"
+              className="w-auto bg-[#202023] border-zinc-800 text-white"
             >
-              <option value="staff">Staff</option>
-              <option value="admin">Admin</option>
+              <option value="staff" className="bg-[#202023] text-white">Staff</option>
+              <option value="admin" className="bg-[#202023] text-white">Admin</option>
             </Select>
-            <Button type="submit" loading={inviting}>
+            <Button type="submit" loading={inviting} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold px-6 py-2.5">
               Send invite
             </Button>
           </form>
-          <p className="text-xs text-muted">
+          <p className="text-xs text-zinc-400">
             There&apos;s no email delivery wired up yet — copy the invite link and share it
             directly with your teammate.
           </p>

@@ -60,13 +60,13 @@ export default async function DashboardLayout({
   return (
     <OrganizationProvider profile={profile} organization={organization}>
       <SidebarProvider>
-        <div className="flex h-screen bg-background">
+        <div className="flex h-screen bg-[#121214] text-white dark">
           <Sidebar />
 
           <MainContent>
             <Topbar email={user.email} />
 
-            <main className="flex-1 bg-white p-6 overflow-y-auto">
+            <main className="flex-1 bg-[#1E1E1E] p-6 overflow-y-auto">
               {children}
             </main>
           </MainContent>
