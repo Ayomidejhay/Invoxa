@@ -12,11 +12,22 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center text-center py-16 px-6 border-2 border-dashed border-border rounded-2xl bg-white/50">
-      {icon && <div className="text-muted mb-3">{icon}</div>}
-      <p className="font-medium text-dark">{title}</p>
-      {description && <p className="text-sm text-muted mt-1 max-w-sm">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
+    <div className="flex flex-col items-center text-center py-16 px-6 border border-zinc-800/80 rounded-2xl bg-gradient-to-b from-[#242427] to-[#1C1C1E] shadow-xl relative overflow-hidden">
+      {/* Decorative ambient glows */}
+      <div className="absolute -top-24 -left-24 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+      
+      {icon && (
+        <div className="relative mb-5 p-4 rounded-full bg-zinc-800/50 border border-zinc-700/30 text-blue-400 shadow-inner flex items-center justify-center">
+          {/* Subtle pulse ambient background */}
+          <div className="absolute inset-0 bg-blue-500/10 rounded-full blur-md" />
+          <div className="relative z-10">{icon}</div>
+        </div>
+      )}
+      <h3 className="font-semibold text-lg text-white mb-2">{title}</h3>
+      {description && <p className="text-sm text-zinc-400 max-w-sm leading-relaxed">{description}</p>}
+      {action && <div className="mt-6 relative z-10">{action}</div>}
     </div>
   );
 }
+

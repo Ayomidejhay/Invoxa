@@ -341,6 +341,7 @@ import { useOrganization } from '../components/OrganizationProvider'
 import { Card } from '@/app/components/ui/Card'
 import { SkeletonStatCard } from '@/app/components/ui/Skeleton'
 import { formatCurrency } from '@/lib/format'
+import OnboardingChecklist from './components/OnboardingChecklist'
 
 type Stats = {
   totalRevenue: number
@@ -522,6 +523,12 @@ export default function DashboardPage() {
         <h1 className="text-xl font-bold text-white">Dashboard</h1>
         <span className="text-xs text-zinc-400 tracking-wider uppercase font-mono">{organization.name} workspace</span>
       </div>
+
+      <OnboardingChecklist
+        productCount={stats.totalProducts}
+        customerCount={stats.totalCustomers}
+        invoiceCount={stats.totalInvoices}
+      />
 
       {/* KPI Cards */}
       <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
