@@ -272,11 +272,11 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="space-y-6 bg-[#1E1E1E] text-white">
+    <div className="space-y-6 text-dark dark:text-white">
       {confirmDialog}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-white">Customers</h1>
+        <h1 className="text-xl font-bold text-dark dark:text-white">Customers</h1>
         <Button
           onClick={() => {
             setSelectedCustomer(undefined)
@@ -293,7 +293,7 @@ export default function CustomersPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name, email, or phone..."
-          className="pl-10 bg-[#202023] border border-zinc-800 text-white rounded-lg placeholder-zinc-500"
+          className="pl-10 bg-white dark:bg-[#202023] border border-slate-200 dark:border-zinc-800 text-dark dark:text-white rounded-lg placeholder-zinc-500"
         />
       </div>
 
@@ -301,10 +301,10 @@ export default function CustomersPage() {
         <>
           <div className="md:hidden space-y-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-[#202023] border border-zinc-800 p-4 rounded-xl h-24 animate-pulse" />
+              <div key={i} className="bg-slate-50 dark:bg-[#202023] border border-slate-150 dark:border-zinc-800 p-4 rounded-xl h-24 animate-pulse" />
             ))}
           </div>
-          <table className="hidden md:table w-full text-sm bg-[#202023] border border-zinc-850 rounded-xl overflow-hidden">
+          <table className="hidden md:table w-full text-sm bg-white dark:bg-[#202023] border border-slate-200 dark:border-zinc-850 rounded-xl overflow-hidden shadow-sm">
             <tbody>{Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} columns={4} />)}</tbody>
           </table>
         </>
@@ -324,24 +324,24 @@ export default function CustomersPage() {
           {/* MOBILE VIEW: Cards */}
           <div className="md:hidden space-y-4">
             {pageItems.map((c) => (
-              <div key={c.id} className="bg-[#202023] p-4 rounded-xl border border-zinc-800 shadow-sm space-y-3">
+              <div key={c.id} className="bg-white dark:bg-[#202023] p-4 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm space-y-3">
                 <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2 font-bold text-zinc-100">
+                  <div className="flex items-center gap-2 font-bold text-dark dark:text-zinc-100">
                     <FiUser className="text-[#60A5FA]" />
                     {c.name}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => { setSelectedCustomer(c); setModalOpen(true) }} className="text-blue-400 p-2 cursor-pointer hover:text-blue-300">
+                    <button onClick={() => { setSelectedCustomer(c); setModalOpen(true) }} className="text-blue-500 dark:text-blue-400 p-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-300">
                       <FiEdit2 size={18} />
                     </button>
                     {isOwnerOrAdmin && (
-                      <button onClick={() => handleDelete(c)} className="text-red-400 p-2 cursor-pointer hover:text-red-300">
+                      <button onClick={() => handleDelete(c)} className="text-red-500 dark:text-red-400 p-2 cursor-pointer hover:text-red-650 dark:hover:text-red-350">
                         <FiTrash2 size={18} />
                       </button>
                     )}
                   </div>
                 </div>
-                <div className="text-sm text-zinc-400 space-y-1">
+                <div className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
                   {c.email && <p className="flex items-center gap-2"><FiMail size={14} /> {c.email}</p>}
                   {c.phone && <p className="flex items-center gap-2"><FiPhone size={14} /> {c.phone}</p>}
                 </div>
@@ -350,28 +350,28 @@ export default function CustomersPage() {
           </div>
 
           {/* DESKTOP VIEW: Table */}
-          <div className="hidden md:block bg-[#202023] border border-zinc-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="hidden md:block bg-white dark:bg-[#202023] border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
             <table className="w-full text-sm">
-              <thead className="bg-[#1A1A1C] border-b border-zinc-800">
+              <thead className="bg-slate-50 dark:bg-[#1A1A1C] border-b border-slate-200 dark:border-zinc-800">
                 <tr>
-                  <th className="p-4 text-left font-semibold text-zinc-400">Name</th>
-                  <th className="p-4 text-left font-semibold text-zinc-400">Email</th>
-                  <th className="p-4 text-left font-semibold text-zinc-400">Phone</th>
-                  <th className="p-4 text-left font-semibold text-zinc-400">Actions</th>
+                  <th className="p-4 text-left font-semibold text-zinc-550 dark:text-zinc-400">Name</th>
+                  <th className="p-4 text-left font-semibold text-zinc-550 dark:text-zinc-400">Email</th>
+                  <th className="p-4 text-left font-semibold text-zinc-550 dark:text-zinc-400">Phone</th>
+                  <th className="p-4 text-left font-semibold text-zinc-550 dark:text-zinc-400">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {pageItems.map((c) => (
-                  <tr key={c.id} className="border-t border-zinc-800/80 hover:bg-zinc-800/30 transition text-zinc-300">
-                    <td className="p-4 font-semibold text-white">{c.name}</td>
-                    <td className="p-4 text-zinc-300">{c.email}</td>
-                    <td className="p-4 text-zinc-350 font-mono">{c.phone}</td>
+                  <tr key={c.id} className="border-t border-slate-100 dark:border-zinc-800/80 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition text-zinc-650 dark:text-zinc-300">
+                    <td className="p-4 font-semibold text-dark dark:text-white">{c.name}</td>
+                    <td className="p-4">{c.email}</td>
+                    <td className="p-4 font-mono">{c.phone}</td>
                     <td className="p-4 flex gap-3 items-center">
-                      <button onClick={() => { setSelectedCustomer(c); setModalOpen(true) }} className="text-blue-400 hover:text-blue-300 cursor-pointer text-sm">
+                      <button onClick={() => { setSelectedCustomer(c); setModalOpen(true) }} className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 cursor-pointer text-sm">
                         Edit
                       </button>
                       {isOwnerOrAdmin && (
-                        <button onClick={() => handleDelete(c)} className="text-red-400 hover:text-red-300 cursor-pointer text-sm">
+                        <button onClick={() => handleDelete(c)} className="text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 cursor-pointer text-sm">
                           Delete
                         </button>
                       )}

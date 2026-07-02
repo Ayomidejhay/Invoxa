@@ -68,18 +68,18 @@ export default function SignUp() {
 
   if (checkEmail) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#0C0C0E] px-6">
+      <main className="min-h-screen flex items-center justify-center bg-light dark:bg-[#0C0C0E] px-6 transition-colors duration-200">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-xl p-8 rounded-2xl shadow-2xl text-center relative"
+          className="w-full max-w-md bg-white dark:bg-zinc-900/40 border border-slate-200 dark:border-zinc-800/80 backdrop-blur-xl p-8 rounded-2xl shadow-xl dark:shadow-2xl text-center relative"
         >
-          <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-green/20 to-transparent" />
+          <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-deepgreen/20 dark:via-green/20 to-transparent" />
           <div className="w-12 h-12 rounded-full bg-green/10 border border-green/30 flex items-center justify-center text-green text-xl mx-auto mb-4">
             <FiMail />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">Check your email</h1>
-          <p className="text-sm text-zinc-400 leading-relaxed">
+          <h1 className="text-xl font-bold text-dark dark:text-white mb-2">Check your email</h1>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
             We&apos;ve sent a confirmation link to your inbox. Click it to activate your account,
             then come back and log in to set up your business.
           </p>
@@ -101,8 +101,8 @@ export default function SignUp() {
     >
       <div className="space-y-6">
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold text-white tracking-tight">Create Account</h1>
-          <p className="text-xs text-zinc-400">Get started today. Setup your modern billing workspace.</p>
+          <h1 className="text-2xl font-bold text-dark dark:text-white tracking-tight">Create Account</h1>
+          <p className="text-xs text-zinc-555 dark:text-zinc-400">Get started today. Setup your modern billing workspace.</p>
         </div>
 
         {formError && (
@@ -127,7 +127,7 @@ export default function SignUp() {
           />
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-zinc-200 uppercase tracking-wider">Password</label>
+            <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-200 uppercase tracking-wider">Password</label>
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
@@ -138,7 +138,7 @@ export default function SignUp() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-xs text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                className="absolute right-3 top-3 text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
@@ -151,8 +151,8 @@ export default function SignUp() {
         </form>
 
         <div className="relative flex items-center justify-center my-6">
-          <div className="absolute inset-x-0 h-[1px] bg-zinc-800/80" />
-          <span className="relative px-3 bg-[#111113] text-xs text-zinc-500 font-medium">Or continue with</span>
+          <div className="absolute inset-x-0 h-[1px] bg-slate-200 dark:bg-zinc-800/80" />
+          <span className="relative px-3 bg-white dark:bg-zinc-900 text-xs text-zinc-500 font-medium transition-colors">Or continue with</span>
         </div>
 
         <Button variant="outline" onClick={handleGoogleSignIn} fullWidth size="lg" className="flex items-center justify-center gap-2.5">
@@ -160,7 +160,7 @@ export default function SignUp() {
           <span>Continue with Google</span>
         </Button>
 
-        <p className="text-sm text-center text-zinc-400 mt-6">
+        <p className="text-sm text-center text-zinc-555 dark:text-zinc-400 mt-6">
           Already have an account?{" "}
           <Link href="/login" className="text-green hover:underline font-semibold">
             Login

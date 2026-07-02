@@ -266,19 +266,19 @@ function BusinessTab() {
   return (
     <Card className="space-y-6">
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
-        <h2 className="text-lg font-bold text-white">Business Profile</h2>
+        <h2 className="text-lg font-bold text-dark dark:text-white">Business Profile</h2>
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input label="Business name" name="name" value={form.name} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
-          <Input label="Email" name="email" value={form.email} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
-          <Input label="Phone" name="phone" value={form.phone} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
-          <Input label="Address" name="address" value={form.address} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
+          <Input label="Business name" name="name" value={form.name} onChange={handleChange} />
+          <Input label="Email" name="email" value={form.email} onChange={handleChange} />
+          <Input label="Phone" name="phone" value={form.phone} onChange={handleChange} />
+          <Input label="Address" name="address" value={form.address} onChange={handleChange} />
         </div>
 
         <div className="space-y-3 flex flex-col">
-          <label className="text-sm font-medium text-zinc-200">Business Logo</label>
+          <label className="text-sm font-medium text-zinc-750 dark:text-zinc-200">Business Logo</label>
 
           {form.logo_url && (
             <div className="mb-2">
@@ -287,7 +287,7 @@ function BusinessTab() {
                 src={form.logo_url}
                 crossOrigin="anonymous"
                 alt="Logo"
-                className="h-16 w-16 object-cover rounded-xl border border-zinc-800 bg-zinc-900"
+                className="h-16 w-16 object-cover rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-900"
               />
             </div>
           )}
@@ -299,7 +299,7 @@ function BusinessTab() {
               const file = e.target.files?.[0]
               if (file) handleLogoUpload(file)
             }}
-            className="border border-zinc-800 bg-[#202023] text-zinc-300 p-2.5 rounded-xl w-full text-sm cursor-pointer focus:outline-none file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-950/40 file:text-blue-400 hover:file:bg-blue-950/60"
+            className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#202023] text-zinc-700 dark:text-zinc-300 p-2.5 rounded-xl w-full text-sm cursor-pointer focus:outline-none file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 dark:file:bg-blue-950/40 file:text-blue-600 dark:file:text-blue-400 hover:file:bg-blue-100 dark:hover:file:bg-blue-950/60"
           />
 
           {uploading && <p className="text-sm text-zinc-400">Uploading...</p>}

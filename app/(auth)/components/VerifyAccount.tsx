@@ -39,8 +39,8 @@ export default function VerifyAccount() {
     >
       <div className="space-y-6">
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold text-white tracking-tight">Verify Account</h1>
-          <p className="text-xs text-zinc-400">Enter validation code to continue.</p>
+          <h1 className="text-2xl font-bold text-dark dark:text-white tracking-tight">Verify Account</h1>
+          <p className="text-xs text-zinc-555 dark:text-zinc-400">Enter validation code to continue.</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -58,7 +58,7 @@ export default function VerifyAccount() {
           </Button>
         </form>
 
-        <p className="text-sm text-center text-zinc-400 mt-6">
+        <p className="text-sm text-center text-zinc-555 dark:text-zinc-400 mt-6">
           Didn&apos;t receive a code?{" "}
           <Link href="/forget-password" className="text-green hover:underline font-semibold">
             Resend

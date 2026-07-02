@@ -5,8 +5,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import html2canvas from "html2canvas-pro";
-import { jsPDF } from "jspdf";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useOrganization } from "../../components/OrganizationProvider";
 import type { InvoiceStatus, InvoiceType } from "@/lib/supabase/database.types";
@@ -105,6 +103,7 @@ export default function InvoiceDetailPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [voiding, setVoiding] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -251,97 +250,32 @@ export default function InvoiceDetailPage() {
   };
 
   const downloadPDF = async () => {
-    const element = document.getElementById("invoice");
-
-    if (!element) return;
-
-    // Find the scrollable container (the main dashboard wrapper)
-    const scrollContainer = element.closest(".overflow-y-auto");
-    const originalScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
-
-    // Save original style properties to restore later
-    const originalWidth = element.style.width;
-    const originalMaxWidth = element.style.maxWidth;
-    const originalPadding = element.style.padding;
-
-    // Temporarily force fixed width for clean A4 printing layout
-    element.style.width = "850px";
-    element.style.maxWidth = "none";
-    element.style.padding = "48px";
-
-    // Temporarily scroll to the top of the container to prevent any vertical scroll clipping
-    if (scrollContainer) {
-      scrollContainer.scrollTop = 0;
-    }
-
+    if (!invoice) return;
+    setDownloading(true);
     try {
-      const canvas = await html2canvas(element, {
-        scale: 2, // high quality
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        // letterRendering forces html2canvas to draw each character
-        // individually instead of whole strings at once — this is the
-        // standard fix for the ₦ (Naira) glyph overlapping adjacent
-        // digits, which is a width-calculation bug in html2canvas's own
-        // text rasterizer, not a font issue.
-        // @ts-expect-error: letterRendering exists at runtime though missing in types
-        letterRendering: true,
-        // We scrolled the container to the top, so we don't need scroll offsets anymore.
-        scrollX: 0,
-        scrollY: 0,
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-
-      const pdf = new jsPDF("p", "mm", "a4");
-
-      const imgWidth = 210;
-      const pageHeight = 295;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+      const response = await fetch(`/api/invoice/${id}/pdf`);
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF");
       }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
 
       const safeInvoiceNumber = (invoice.invoice_number || invoice.id.slice(0, 8))
         .replace(/[^a-zA-Z0-9-_\s.]/g, "_");
 
-      pdf.save(`invoice-${safeInvoiceNumber}.pdf`);
+      link.download = `invoice-${safeInvoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF downloaded successfully");
     } catch (err) {
-      console.error("Failed to generate PDF", err);
-      const errMsg = err instanceof Error ? err.stack || err.message : String(err);
-      const errorDiv = document.createElement("div");
-      errorDiv.id = "pdf-debug-error";
-      errorDiv.style.position = "fixed";
-      errorDiv.style.top = "10px";
-      errorDiv.style.left = "10px";
-      errorDiv.style.right = "10px";
-      errorDiv.style.background = "red";
-      errorDiv.style.color = "white";
-      errorDiv.style.padding = "20px";
-      errorDiv.style.zIndex = "999999";
-      errorDiv.style.fontFamily = "monospace";
-      errorDiv.style.whiteSpace = "pre-wrap";
-      errorDiv.innerText = "PDF Error:\n" + errMsg;
-      document.body.appendChild(errorDiv);
+      console.error(err);
+      toast.error("Failed to generate PDF. Please try again.");
     } finally {
-      // Restore original styling and scroll position
-      element.style.width = originalWidth;
-      element.style.maxWidth = originalMaxWidth;
-      element.style.padding = originalPadding;
-      if (scrollContainer) {
-        scrollContainer.scrollTop = originalScrollTop;
-      }
+      setDownloading(false);
     }
   };
 
@@ -604,16 +538,16 @@ export default function InvoiceDetailPage() {
 
       {/* Payment history — internal record-keeping, not shown on the printable invoice */}
       {payments.length > 0 && (
-        <div className="bg-[#202023] border border-zinc-800 rounded-2xl p-6 print:hidden">
-          <h3 className="text-sm font-semibold text-white mb-4">Payment History</h3>
-          <div className="divide-y divide-zinc-850">
+        <div className="bg-white dark:bg-[#202023] border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 print:hidden shadow-sm">
+          <h3 className="text-sm font-semibold text-dark dark:text-white mb-4">Payment History</h3>
+          <div className="divide-y divide-slate-100 dark:divide-zinc-850">
             {payments.map((p) => (
-              <div key={p.id} className="flex items-center justify-between py-3 text-sm border-b border-zinc-850/50 last:border-b-0">
+              <div key={p.id} className="flex items-center justify-between py-3 text-sm border-b border-slate-100 dark:border-zinc-850/50 last:border-b-0">
                 <div>
-                  <p className="text-white font-medium">{formatCurrency(p.amount, currency)}</p>
-                  {p.note && <p className="text-zinc-400 text-xs mt-0.5">{p.note}</p>}
+                  <p className="text-dark dark:text-white font-medium">{formatCurrency(p.amount, currency)}</p>
+                  {p.note && <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5">{p.note}</p>}
                 </div>
-                <span className="text-zinc-400 text-xs">
+                <span className="text-zinc-500 dark:text-zinc-400 text-xs">
                   {new Date(p.created_at).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "short",
@@ -632,7 +566,7 @@ export default function InvoiceDetailPage() {
           Print
         </Button>
 
-        <Button variant="outline" onClick={downloadPDF}>
+        <Button variant="outline" onClick={downloadPDF} loading={downloading}>
           Download PDF
         </Button>
 
@@ -651,9 +585,9 @@ export default function InvoiceDetailPage() {
 
       {/* Record Payment Modal */}
       <Modal open={paymentModalOpen} onClose={() => setPaymentModalOpen(false)} title="Record Payment" size="sm">
-        <div className="space-y-4 text-zinc-300">
-          <p className="text-sm text-zinc-400">
-            Balance due: <span className="font-mono font-bold text-white">{formatCurrency(balanceDue, currency, { forCanvas: true })}</span>
+        <div className="space-y-4 text-zinc-700 dark:text-zinc-300">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Balance due: <span className="font-mono font-bold text-dark dark:text-white">{formatCurrency(balanceDue, currency, { forCanvas: true })}</span>
           </p>
           <Input
             label="Amount received"
@@ -667,7 +601,6 @@ export default function InvoiceDetailPage() {
                 ? `Prefilled at your default deposit of ${org.default_deposit_percentage}% — change as needed`
                 : undefined
             }
-            className="bg-[#202023] border-zinc-800 text-white"
           />
           <Textarea
             label="Note (optional)"
@@ -675,7 +608,6 @@ export default function InvoiceDetailPage() {
             value={paymentNote}
             onChange={(e) => setPaymentNote(e.target.value)}
             rows={2}
-            className="bg-[#202023] border-zinc-800 text-white"
           />
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="outline" onClick={() => setPaymentModalOpen(false)}>

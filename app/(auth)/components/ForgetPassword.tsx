@@ -55,8 +55,8 @@ export default function ForgotPassword() {
     >
       <div className="space-y-6">
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold text-white tracking-tight">Reset Password</h1>
-          <p className="text-xs text-zinc-400">Restore access to your account securely.</p>
+          <h1 className="text-2xl font-bold text-dark dark:text-white tracking-tight">Reset Password</h1>
+          <p className="text-xs text-zinc-555 dark:text-zinc-400">Restore access to your account securely.</p>
         </div>
 
         {sent ? (
@@ -64,8 +64,8 @@ export default function ForgotPassword() {
             <div className="w-12 h-12 rounded-full bg-green/10 border border-green/30 flex items-center justify-center text-green text-xl mx-auto">
               <FiMail />
             </div>
-            <h2 className="text-lg font-bold text-white">Check Your Inbox</h2>
-            <p className="text-xs text-zinc-400 leading-relaxed">
+            <h2 className="text-lg font-bold text-dark dark:text-white">Check Your Inbox</h2>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
               If an account exists for that email, a recovery link is on its way. Use it to configure a new password.
             </p>
           </div>
@@ -89,7 +89,7 @@ export default function ForgotPassword() {
           </form>
         )}
 
-        <p className="text-sm text-center text-zinc-400 mt-6">
+        <p className="text-sm text-center text-zinc-555 dark:text-zinc-400 mt-6">
           Remember your password?{" "}
           <Link href="/login" className="text-green hover:underline font-semibold">
             Login

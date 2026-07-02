@@ -324,7 +324,7 @@ export function AccountTab() {
     placeholder: string
   ) => (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium text-zinc-200">{label}</label>
+      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-200">{label}</label>
       <div className="relative">
         <input
           type={showPassword[field] ? 'text' : 'password'}
@@ -332,7 +332,7 @@ export function AccountTab() {
           value={form[name as keyof typeof form]}
           onChange={handleChange}
           placeholder={placeholder}
-          className="border border-zinc-800 bg-[#202023] text-white p-2.5 rounded-xl w-full pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-500"
+          className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#202023] text-dark dark:text-white p-2.5 rounded-xl w-full pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-500"
         />
         <button
           type="button"
@@ -340,7 +340,7 @@ export function AccountTab() {
             e.preventDefault()
             toggleVisibility(field)
           }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 cursor-pointer"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 dark:text-zinc-400 cursor-pointer"
         >
           {showPassword[field] ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
@@ -351,10 +351,10 @@ export function AccountTab() {
   return (
     <div className="space-y-6">
       <Card className="space-y-8">
-        <h2 className="text-lg font-bold text-white">Account Settings</h2>
+        <h2 className="text-lg font-bold text-dark dark:text-white">Account Settings</h2>
 
         <div className="space-y-5 max-w-md">
-          <h3 className="font-semibold text-zinc-200 text-sm">Change Password</h3>
+          <h3 className="font-semibold text-zinc-700 dark:text-zinc-200 text-sm">Change Password</h3>
 
           {error && <p className="text-sm text-red-400">{error}</p>}
 
@@ -368,9 +368,9 @@ export function AccountTab() {
         </div>
       </Card>
 
-      <Card className="space-y-3 border-red-900/40 bg-[#202023]">
-        <h3 className="font-semibold text-red-400">Danger Zone</h3>
-        <p className="text-sm text-zinc-400">This action will sign you out.</p>
+      <Card className="space-y-3 border-red-200 dark:border-red-900/40 bg-red-50/20 dark:bg-[#202023]">
+        <h3 className="font-semibold text-red-650 dark:text-red-400">Danger Zone</h3>
+        <p className="text-sm text-zinc-550 dark:text-zinc-400">This action will sign you out.</p>
 
         <Button
           variant="danger"

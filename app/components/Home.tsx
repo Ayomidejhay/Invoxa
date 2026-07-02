@@ -507,21 +507,21 @@ export default function MainHome() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <main className="bg-light text-dark overflow-hidden">
+    <main className="bg-light dark:bg-[#121214] text-dark dark:text-white transition-colors duration-200 overflow-hidden">
       {/* HERO */}
       <section className="relative pt-40 pb-24 md:pt-48 md:pb-32 px-6">
-        <div className="absolute inset-0 bg-gradient-to-br from-light via-light to-lightgreen/20" />
+        <div className="absolute inset-0 bg-gradient-to-br from-light via-light to-lightgreen/20 dark:from-[#121214] dark:via-[#121214] dark:to-lightgreen/10" />
 
         <div className="relative z-10 max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
           <motion.div variants={fadeUp} initial="hidden" animate="show">
-            <span className="inline-block text-xs font-semibold uppercase tracking-wide text-deepgreen bg-primary-soft px-3 py-1.5 rounded-full mb-6">
+            <span className="inline-block text-xs font-semibold uppercase tracking-wide text-deepgreen dark:text-lightgreen bg-primary-soft dark:bg-zinc-800 px-3 py-1.5 rounded-full mb-6">
               Invoicing for sales &amp; rentals
             </span>
 
             <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6">
               Focus on growth.
               <br />
-              <span className="text-deepgreen">We handle the invoices.</span>
+              <span className="text-deepgreen dark:text-lightgreen">We handle the invoices.</span>
             </h1>
 
             <p className="text-lg md:text-xl text-muted mb-8 max-w-lg">
@@ -538,7 +538,7 @@ export default function MainHome() {
               </Link>
               <Link
                 href="/login"
-                className="inline-flex items-center px-8 py-3.5 rounded-2xl border border-border text-dark hover:bg-white transition-colors font-semibold"
+                className="inline-flex items-center px-8 py-3.5 rounded-2xl border border-border dark:border-zinc-800 text-dark dark:text-white hover:bg-white dark:hover:bg-zinc-800 transition-colors font-semibold"
               >
                 Log in
               </Link>
@@ -599,9 +599,9 @@ export default function MainHome() {
             <motion.div
               key={i}
               variants={fadeUp}
-              className="p-6 rounded-2xl bg-white border border-border shadow-sm hover:shadow-md transition-shadow"
+              className="p-6 rounded-2xl bg-white dark:bg-[#1E1E1E] border border-border dark:border-zinc-800/80 shadow-sm hover:shadow-md transition-shadow"
             >
-              <h3 className="text-xl font-semibold mb-2 text-deepgreen">{item.title}</h3>
+              <h3 className="text-xl font-semibold mb-2 text-deepgreen dark:text-lightgreen">{item.title}</h3>
               <p className="text-muted">{item.desc}</p>
             </motion.div>
           ))}
@@ -609,7 +609,7 @@ export default function MainHome() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="py-24 px-6 bg-white">
+      <section className="py-24 px-6 bg-white dark:bg-[#1E1E1E] border-y border-border dark:border-zinc-800/50 transition-colors duration-200">
         <div className="max-w-6xl mx-auto">
           <motion.h2
             variants={fadeUp}
@@ -649,7 +649,7 @@ export default function MainHome() {
                 viewport={{ once: true }}
                 className="relative text-center"
               >
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-deepgreen text-white flex items-center justify-center text-lg font-bold shadow-lg font-mono">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-deepgreen dark:bg-lightgreen text-white dark:text-dark flex items-center justify-center text-lg font-bold shadow-lg font-mono">
                   {item.step}
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
@@ -689,21 +689,21 @@ export default function MainHome() {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true }}
-              className={`relative p-8 rounded-2xl bg-white border shadow-sm ${
-                plan.highlight ? "border-deepgreen shadow-lg" : "border-border"
+              className={`relative p-8 rounded-2xl bg-white dark:bg-[#1E1E1E] border shadow-sm ${
+                plan.highlight ? "border-deepgreen dark:border-lightgreen shadow-lg" : "border-border dark:border-zinc-800"
               }`}
             >
               {plan.highlight && (
-                <span className="absolute -top-3 left-8 bg-deepgreen text-white text-[10px] font-bold uppercase tracking-wide px-3 py-1 rounded-full">
+                <span className="absolute -top-3 left-8 bg-deepgreen dark:bg-lightgreen text-white dark:text-dark text-[10px] font-bold uppercase tracking-wide px-3 py-1 rounded-full">
                   Most popular
                 </span>
               )}
               <h3 className="text-2xl font-bold mb-1">{plan.name}</h3>
-              <p className="text-3xl font-bold text-deepgreen mb-6 font-mono">{plan.price}</p>
-              <ul className="space-y-3 mb-8 text-dark">
+              <p className="text-3xl font-bold text-deepgreen dark:text-lightgreen mb-6 font-mono">{plan.price}</p>
+              <ul className="space-y-3 mb-8 text-dark dark:text-zinc-200">
                 {plan.features.map((f, idx) => (
                   <li key={idx} className="flex items-center gap-2">
-                    <FiCheck className="text-deepgreen shrink-0" />
+                    <FiCheck className="text-deepgreen dark:text-lightgreen shrink-0" />
                     <span className="text-muted">{f}</span>
                   </li>
                 ))}
@@ -713,7 +713,7 @@ export default function MainHome() {
                 className={`block text-center py-3 rounded-xl font-semibold transition-colors ${
                   plan.highlight
                     ? "bg-deepgreen text-white hover:bg-primary-hover"
-                    : "bg-primary-soft text-deepgreen hover:bg-lightgreen/30"
+                    : "bg-primary-soft dark:bg-zinc-850 text-deepgreen dark:text-lightgreen hover:bg-lightgreen/30 dark:hover:bg-zinc-800"
                 }`}
               >
                 Choose {plan.name}
@@ -724,7 +724,7 @@ export default function MainHome() {
       </section>
 
       {/* FAQ */}
-      <section className="py-24 px-6 bg-white">
+      <section className="py-24 px-6 bg-white dark:bg-[#1E1E1E] transition-colors duration-200">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
             Frequently asked questions
@@ -732,13 +732,13 @@ export default function MainHome() {
 
           <div className="space-y-4">
             {faqs.map((item, i) => (
-              <div key={i} className="border border-border rounded-2xl bg-light/50 overflow-hidden">
+              <div key={i} className="border border-border dark:border-zinc-800 rounded-2xl bg-light/50 dark:bg-zinc-900/30 overflow-hidden">
                 <button
                   onClick={() => setOpenIndex(openIndex === i ? null : i)}
                   className="w-full flex justify-between items-center p-6 text-left cursor-pointer"
                 >
-                  <span className="font-semibold text-dark">{item.q}</span>
-                  <span className="text-deepgreen text-xl shrink-0 ml-4">
+                  <span className="font-semibold text-dark dark:text-white">{item.q}</span>
+                  <span className="text-deepgreen dark:text-lightgreen text-xl shrink-0 ml-4">
                     {openIndex === i ? "−" : "+"}
                   </span>
                 </button>
@@ -763,7 +763,7 @@ export default function MainHome() {
       </section>
 
       {/* CTA */}
-      <section className="py-24 px-6 text-center bg-gradient-to-r from-green to-lightgreen">
+      <section className="py-24 px-6 text-center bg-gradient-to-r from-green to-lightgreen dark:from-deepgreen dark:to-green">
         <motion.div
           variants={fadeUp}
           initial="hidden"

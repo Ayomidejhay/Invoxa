@@ -278,11 +278,11 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="space-y-6 bg-[#1E1E1E] text-white">
+    <div className="space-y-6 text-dark dark:text-white">
       {confirmDialog}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-white">Inventory</h1>
+        <h1 className="text-xl font-bold text-dark dark:text-white">Inventory</h1>
         <Button
           onClick={() => {
             setSelectedProduct(undefined)
@@ -299,7 +299,7 @@ export default function InventoryPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name or SKU..."
-          className="pl-10 bg-[#202023] border border-zinc-800 text-white rounded-lg placeholder-zinc-500"
+          className="pl-10 bg-white dark:bg-[#202023] border border-slate-200 dark:border-zinc-800 text-dark dark:text-white rounded-lg placeholder-zinc-500"
         />
       </div>
 
@@ -307,10 +307,10 @@ export default function InventoryPage() {
         <>
           <div className="md:hidden space-y-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-[#202023] border border-zinc-800 p-4 rounded-xl h-24 animate-pulse" />
+              <div key={i} className="bg-slate-50 dark:bg-[#202023] border border-slate-150 dark:border-zinc-800 p-4 rounded-xl h-24 animate-pulse" />
             ))}
           </div>
-          <table className="hidden md:table w-full text-sm bg-[#202023] border border-zinc-850 rounded-xl overflow-hidden">
+          <table className="hidden md:table w-full text-sm bg-white dark:bg-[#202023] border border-slate-200 dark:border-zinc-850 rounded-xl overflow-hidden shadow-sm">
             <tbody>{Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} columns={5} />)}</tbody>
           </table>
         </>
@@ -334,18 +334,18 @@ export default function InventoryPage() {
           {/* MOBILE VIEW: Cards */}
           <div className="md:hidden space-y-4">
             {pageItems.map((p) => (
-              <div key={p.id} className="bg-[#202023] p-4 rounded-xl border border-zinc-800 shadow-sm">
+              <div key={p.id} className="bg-white dark:bg-[#202023] p-4 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-2 font-bold text-zinc-100">
+                  <div className="flex items-center gap-2 font-bold text-dark dark:text-zinc-100">
                     <FiPackage className="text-[#60A5FA]" />
                     {p.name}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => { setSelectedProduct(p); setModalOpen(true) }} className="text-blue-400 p-2 cursor-pointer hover:text-blue-300">
+                    <button onClick={() => { setSelectedProduct(p); setModalOpen(true) }} className="text-blue-500 dark:text-blue-400 p-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-300">
                       <FiEdit2 size={16} />
                     </button>
                     {isOwnerOrAdmin && (
-                      <button onClick={() => handleDelete(p)} className="text-red-400 p-2 cursor-pointer hover:text-red-300">
+                      <button onClick={() => handleDelete(p)} className="text-red-500 dark:text-red-400 p-2 cursor-pointer hover:text-red-650 dark:hover:text-red-350">
                         <FiTrash2 size={16} />
                       </button>
                     )}
@@ -353,17 +353,17 @@ export default function InventoryPage() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-sm">
-                  <div className="bg-[#1E2D4A]/50 p-2 rounded-lg border border-[#1E2D4A]/30">
-                    <p className="text-blue-400 text-[10px] uppercase font-semibold">Sale</p>
-                    <p className="font-mono font-medium text-white">{p.sale_price ?? '—'}</p>
+                  <div className="bg-blue-50/50 dark:bg-[#1E2D4A]/50 p-2 rounded-lg border border-blue-100 dark:border-[#1E2D4A]/30">
+                    <p className="text-blue-600 dark:text-blue-400 text-[10px] uppercase font-semibold">Sale</p>
+                    <p className="font-mono font-medium text-dark dark:text-white">{p.sale_price ?? '—'}</p>
                   </div>
-                  <div className="bg-[#4C2F1A]/50 p-2 rounded-lg border border-[#4C2F1A]/30">
-                    <p className="text-orange-400 text-[10px] uppercase font-semibold">Rent</p>
-                    <p className="font-mono font-medium text-white">{p.rental_price ?? '—'}</p>
+                  <div className="bg-orange-50/50 dark:bg-[#4C2F1A]/50 p-2 rounded-lg border border-orange-100 dark:border-[#4C2F1A]/30">
+                    <p className="text-orange-600 dark:text-orange-400 text-[10px] uppercase font-semibold">Rent</p>
+                    <p className="font-mono font-medium text-dark dark:text-white">{p.rental_price ?? '—'}</p>
                   </div>
-                  <div className={`p-2 rounded-lg border ${p.low_stock_threshold != null && p.stock <= p.low_stock_threshold ? 'bg-red-950/30 border-red-900/40' : 'bg-zinc-800/80 border-zinc-700/30'}`}>
-                    <p className="text-zinc-400 text-[10px] uppercase font-semibold">Stock</p>
-                    <p className={`font-mono font-medium ${p.low_stock_threshold != null && p.stock <= p.low_stock_threshold ? 'text-red-400' : 'text-white'}`}>
+                  <div className={`p-2 rounded-lg border ${p.low_stock_threshold != null && p.stock <= p.low_stock_threshold ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/40' : 'bg-slate-50 dark:bg-zinc-800/80 border-slate-100 dark:border-zinc-700/30'}`}>
+                    <p className="text-zinc-550 dark:text-zinc-400 text-[10px] uppercase font-semibold">Stock</p>
+                    <p className={`font-mono font-medium ${p.low_stock_threshold != null && p.stock <= p.low_stock_threshold ? 'text-red-500 dark:text-red-400' : 'text-dark dark:text-white'}`}>
                       {p.stock}
                     </p>
                   </div>
@@ -373,38 +373,38 @@ export default function InventoryPage() {
           </div>
 
           {/* DESKTOP VIEW: Table */}
-          <div className="hidden md:block bg-[#202023] border border-zinc-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="hidden md:block bg-white dark:bg-[#202023] border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
             <table className="w-full text-sm">
-              <thead className="bg-[#1A1A1C] border-b border-zinc-800">
+              <thead className="bg-slate-50 dark:bg-[#1A1A1C] border-b border-slate-200 dark:border-zinc-800">
                 <tr>
-                  <th className="p-4 text-left font-semibold text-zinc-400">Name</th>
-                  <th className="p-4 text-left font-semibold text-zinc-400">Sale Price</th>
-                  <th className="p-4 text-left font-semibold text-zinc-400">Rental Price</th>
-                  <th className="p-4 text-left font-semibold text-zinc-400">Stock</th>
-                  <th className="p-4 text-left font-semibold text-zinc-400">Actions</th>
+                  <th className="p-4 text-left font-semibold text-zinc-550 dark:text-zinc-400">Name</th>
+                  <th className="p-4 text-left font-semibold text-zinc-550 dark:text-zinc-400">Sale Price</th>
+                  <th className="p-4 text-left font-semibold text-zinc-550 dark:text-zinc-400">Rental Price</th>
+                  <th className="p-4 text-left font-semibold text-zinc-550 dark:text-zinc-400">Stock</th>
+                  <th className="p-4 text-left font-semibold text-zinc-550 dark:text-zinc-400">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {pageItems.map((p) => {
                   const lowStock = p.low_stock_threshold != null && p.stock <= p.low_stock_threshold
                   return (
-                    <tr key={p.id} className="border-t border-zinc-800/80 hover:bg-zinc-800/30 transition text-zinc-300">
-                      <td className="p-4 font-semibold text-white">
+                    <tr key={p.id} className="border-t border-slate-100 dark:border-zinc-800/80 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition text-zinc-650 dark:text-zinc-300">
+                      <td className="p-4 font-semibold text-dark dark:text-white">
                         {p.name}
-                        {p.sku && <span className="ml-2 text-xs text-zinc-400 font-mono">[{p.sku}]</span>}
+                        {p.sku && <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400 font-mono">[{p.sku}]</span>}
                       </td>
-                      <td className="p-4 font-mono text-zinc-200">{p.sale_price != null ? formatCurrency(p.sale_price, organization.currency) : '—'}</td>
-                      <td className="p-4 font-mono text-zinc-200">{p.rental_price != null ? formatCurrency(p.rental_price, organization.currency) : '—'}</td>
+                      <td className="p-4 font-mono text-zinc-650 dark:text-zinc-200">{p.sale_price != null ? formatCurrency(p.sale_price, organization.currency) : '—'}</td>
+                      <td className="p-4 font-mono text-zinc-650 dark:text-zinc-200">{p.rental_price != null ? formatCurrency(p.rental_price, organization.currency) : '—'}</td>
                       <td className="p-4">
-                        <span className={`font-mono ${lowStock ? 'text-red-400 font-semibold' : 'text-zinc-200'}`}>{p.stock}</span>
-                        {lowStock && <Badge tone="danger" className="ml-2 bg-red-950/40 text-red-400 border border-red-900/50">Low</Badge>}
+                        <span className={`font-mono ${lowStock ? 'text-red-500 dark:text-red-400 font-semibold' : 'text-zinc-650 dark:text-zinc-200'}`}>{p.stock}</span>
+                        {lowStock && <Badge tone="danger" className="ml-2 bg-red-50 dark:bg-red-950/40 text-red-650 dark:text-red-400 border border-red-200 dark:border-red-900/50">Low</Badge>}
                       </td>
                       <td className="p-4 flex gap-3 items-center">
-                        <button onClick={() => { setSelectedProduct(p); setModalOpen(true) }} className="text-blue-400 hover:text-blue-300 cursor-pointer text-sm">
+                        <button onClick={() => { setSelectedProduct(p); setModalOpen(true) }} className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 cursor-pointer text-sm">
                           Edit
                         </button>
                         {isOwnerOrAdmin && (
-                          <button onClick={() => handleDelete(p)} className="text-red-400 hover:text-red-300 cursor-pointer text-sm">
+                          <button onClick={() => handleDelete(p)} className="text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 cursor-pointer text-sm">
                             Delete
                           </button>
                         )}

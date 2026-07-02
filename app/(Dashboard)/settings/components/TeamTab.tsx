@@ -410,24 +410,24 @@ export function TeamTab() {
     <Card className="space-y-8">
       {confirmDialog}
 
-      <h2 className="text-lg font-bold text-white">Team</h2>
+      <h2 className="text-lg font-bold text-dark dark:text-white">Team</h2>
 
       <div className="space-y-3">
-        <h3 className="font-medium text-sm text-zinc-400">Members</h3>
-        <div className="divide-y divide-zinc-850 border border-zinc-800 rounded-xl overflow-hidden bg-zinc-900/30">
+        <h3 className="font-medium text-sm text-zinc-550 dark:text-zinc-400">Members</h3>
+        <div className="divide-y divide-slate-100 dark:divide-zinc-850 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-slate-50/30 dark:bg-zinc-900/30">
           {loading ? (
             <table className="w-full animate-pulse">
               <tbody>{Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} columns={3} />)}</tbody>
             </table>
           ) : (
             members.map((member) => (
-              <div key={member.id} className="flex items-center justify-between p-4 border-b border-zinc-850 last:border-b-0">
+              <div key={member.id} className="flex items-center justify-between p-4 border-b border-slate-150 dark:border-zinc-850 last:border-b-0">
                 <div>
-                  <p className="font-semibold text-white">
+                  <p className="font-semibold text-dark dark:text-white">
                     {member.full_name || member.email}
                     {member.id === me.id && <span className="text-zinc-500 font-normal"> (you)</span>}
                   </p>
-                  <p className="text-sm text-zinc-400 font-mono mt-0.5">{member.email}</p>
+                  <p className="text-sm text-zinc-550 dark:text-zinc-400 font-mono mt-0.5">{member.email}</p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -435,19 +435,19 @@ export function TeamTab() {
                     <Select
                       value={member.role}
                       onChange={(e) => handleRoleChange(member.id, e.target.value as "admin" | "staff")}
-                      className="w-auto py-1 text-xs capitalize bg-[#202023] border-zinc-800 text-white"
+                      className="w-auto py-1 text-xs capitalize"
                     >
-                      <option value="admin" className="bg-[#202023] text-white">Admin</option>
-                      <option value="staff" className="bg-[#202023] text-white">Staff</option>
+                      <option value="admin" className="bg-white dark:bg-[#202023] text-dark dark:text-white">Admin</option>
+                      <option value="staff" className="bg-white dark:bg-[#202023] text-dark dark:text-white">Staff</option>
                     </Select>
                   ) : (
-                    <span className="text-sm text-zinc-400 capitalize px-2 font-medium">{member.role}</span>
+                    <span className="text-sm text-zinc-550 dark:text-zinc-400 capitalize px-2 font-medium">{member.role}</span>
                   )}
 
                   {isOwnerOrAdmin && member.role !== "owner" && member.id !== me.id && (
                     <button
                       onClick={() => handleRemove(member)}
-                      className="text-sm text-red-400 hover:text-red-300 cursor-pointer transition-colors"
+                      className="text-sm text-red-500 dark:text-red-400 hover:text-red-650 dark:hover:text-red-300 cursor-pointer transition-colors font-medium"
                     >
                       Remove
                     </button>
@@ -460,28 +460,28 @@ export function TeamTab() {
       </div>
 
       {isOwnerOrAdmin && (
-        <div className="space-y-3 pt-2 border-t border-zinc-800/80">
-          <h3 className="font-semibold text-white text-sm">Pending invites</h3>
+        <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-zinc-800/80">
+          <h3 className="font-semibold text-dark dark:text-white text-sm">Pending invites</h3>
           {invites.length === 0 ? (
-            <p className="text-sm text-zinc-400">No pending invites.</p>
+            <p className="text-sm text-zinc-550 dark:text-zinc-400">No pending invites.</p>
           ) : (
-            <div className="divide-y divide-zinc-850 border border-zinc-800 rounded-xl overflow-hidden bg-zinc-900/30">
+            <div className="divide-y divide-slate-100 dark:divide-zinc-850 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-slate-50/30 dark:bg-zinc-900/30">
               {invites.map((invite) => (
-                <div key={invite.id} className="flex items-center justify-between p-4 border-b border-zinc-850 last:border-b-0">
+                <div key={invite.id} className="flex items-center justify-between p-4 border-b border-slate-150 dark:border-zinc-850 last:border-b-0">
                   <div>
-                    <p className="font-semibold text-white">{invite.email}</p>
-                    <p className="text-xs text-zinc-400 capitalize font-mono mt-0.5">{invite.role}</p>
+                    <p className="font-semibold text-dark dark:text-white">{invite.email}</p>
+                    <p className="text-xs text-zinc-550 dark:text-zinc-400 capitalize font-mono mt-0.5">{invite.role}</p>
                   </div>
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => handleCopyLink(invite.token)}
-                      className="text-sm text-blue-400 hover:text-blue-300 cursor-pointer transition-colors"
+                      className="text-sm text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 cursor-pointer transition-colors font-medium"
                     >
                       Copy link
                     </button>
                     <button
                       onClick={() => handleRevoke(invite)}
-                      className="text-sm text-red-400 hover:text-red-300 cursor-pointer transition-colors"
+                      className="text-sm text-red-500 dark:text-red-400 hover:text-red-650 dark:hover:text-red-300 cursor-pointer transition-colors font-medium"
                     >
                       Revoke
                     </button>
@@ -499,23 +499,22 @@ export function TeamTab() {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="teammate@company.com"
-                className="bg-[#202023] border-zinc-800 text-white"
               />
             </div>
             <Select
               label="Role"
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as "admin" | "staff")}
-              className="w-auto bg-[#202023] border-zinc-800 text-white"
+              className="w-auto"
             >
-              <option value="staff" className="bg-[#202023] text-white">Staff</option>
-              <option value="admin" className="bg-[#202023] text-white">Admin</option>
+              <option value="staff" className="bg-white dark:bg-[#202023] text-dark dark:text-white">Staff</option>
+              <option value="admin" className="bg-white dark:bg-[#202023] text-dark dark:text-white">Admin</option>
             </Select>
             <Button type="submit" loading={inviting} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold px-6 py-2.5">
               Send invite
             </Button>
           </form>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-zinc-550 dark:text-zinc-400">
             There&apos;s no email delivery wired up yet — copy the invite link and share it
             directly with your teammate.
           </p>

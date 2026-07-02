@@ -209,7 +209,7 @@ export function InvoiceTab() {
   return (
     <Card className="space-y-6">
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
-        <h2 className="text-lg font-bold text-white">Invoice Settings</h2>
+        <h2 className="text-lg font-bold text-dark dark:text-white">Invoice Settings</h2>
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 
@@ -219,17 +219,16 @@ export function InvoiceTab() {
             name="currency"
             value={form.currency}
             onChange={handleChange}
-            className="bg-[#202023] border-zinc-800 text-white"
           >
-            <option value="" className="bg-[#202023] text-white">Select Currency</option>
+            <option value="" className="bg-white dark:bg-[#202023] text-dark dark:text-white">Select Currency</option>
             {currencies.map((currency) => (
-              <option key={currency.code} value={currency.code} className="bg-[#202023] text-white">
+              <option key={currency.code} value={currency.code} className="bg-white dark:bg-[#202023] text-dark dark:text-white">
                 {currency.code} - {currency.label}
               </option>
             ))}
           </Select>
 
-          <Input label="Invoice Prefix" name="invoice_prefix" value={form.invoice_prefix} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
+          <Input label="Invoice Prefix" name="invoice_prefix" value={form.invoice_prefix} onChange={handleChange} />
         </div>
 
         <Textarea
@@ -237,12 +236,11 @@ export function InvoiceTab() {
           name="payment_terms"
           value={form.payment_terms}
           onChange={handleChange}
-          className="bg-[#202023] border-zinc-800 text-white"
         />
 
-        <div className="border-t border-zinc-800/80 pt-4">
-          <h3 className="font-semibold text-white text-sm mb-1">Part Payments</h3>
-          <p className="text-xs text-zinc-400 mb-3">
+        <div className="border-t border-slate-200 dark:border-zinc-800/80 pt-4">
+          <h3 className="font-semibold text-dark dark:text-white text-sm mb-1">Part Payments</h3>
+          <p className="text-xs text-zinc-550 dark:text-zinc-400 mb-3">
             Suggested deposit when recording a customer&apos;s first payment on an invoice — shown as a
             prefilled amount, not enforced. Staff can still record any amount.
           </p>
@@ -257,17 +255,17 @@ export function InvoiceTab() {
             value={form.default_deposit_percentage}
             onChange={handleChange}
             hint="Leave blank to default to the full balance"
-            className="max-w-xs bg-[#202023] border-zinc-800 text-white"
+            className="max-w-xs"
           />
         </div>
 
-        <div className="border-t border-zinc-800/80 pt-4">
-          <h3 className="font-semibold text-white text-sm mb-3">Bank Details</h3>
+        <div className="border-t border-slate-200 dark:border-zinc-800/80 pt-4">
+          <h3 className="font-semibold text-dark dark:text-white text-sm mb-3">Bank Details</h3>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <Input label="Bank Name" name="bank_name" value={form.bank_name} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
-            <Input label="Account Name" name="account_name" value={form.account_name} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
-            <Input label="Account Number" name="account_number" value={form.account_number} onChange={handleChange} className="bg-[#202023] border-zinc-800 text-white" />
+            <Input label="Bank Name" name="bank_name" value={form.bank_name} onChange={handleChange} />
+            <Input label="Account Name" name="account_name" value={form.account_name} onChange={handleChange} />
+            <Input label="Account Number" name="account_number" value={form.account_number} onChange={handleChange} />
           </div>
         </div>
 

@@ -328,6 +328,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTheme } from '@/app/context/ThemeContext'
 import {
   LineChart,
   Line,
@@ -372,6 +373,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const supabase = getSupabaseClient()
   const { organization } = useOrganization()
+  const { theme } = useTheme()
 
   const [stats, setStats] = useState<Stats>({
     totalRevenue: 0,
@@ -503,10 +505,10 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-xl font-bold text-white">Dashboard</h1>
+        <h1 className="text-xl font-bold text-dark dark:text-white">Dashboard</h1>
         <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-[#202023] border border-zinc-800 p-5 rounded-2xl h-[98px] animate-pulse" />
+            <div key={i} className="bg-slate-100 dark:bg-[#202023] border border-slate-200 dark:border-zinc-800 p-5 rounded-2xl h-[98px] animate-pulse" />
           ))}
         </div>
       </div>
@@ -518,10 +520,10 @@ export default function DashboardPage() {
   const rentalHeight = `${Math.max((stats.rentalCount / maxVal) * 150, 10)}px`
 
   return (
-    <div className="space-y-6 bg-[#1E1E1E] text-white">
+    <div className="space-y-6 text-dark dark:text-white">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">Dashboard</h1>
-        <span className="text-xs text-zinc-400 tracking-wider uppercase font-mono">{organization.name} workspace</span>
+        <h1 className="text-xl font-bold text-dark dark:text-white">Dashboard</h1>
+        <span className="text-xs text-zinc-500 dark:text-zinc-400 tracking-wider uppercase font-mono">{organization.name} workspace</span>
       </div>
 
       <OnboardingChecklist
@@ -531,7 +533,7 @@ export default function DashboardPage() {
       />
 
       {/* KPI Cards */}
-      <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard title="Revenue collected" value={formatCurrency(stats.totalRevenue, organization.currency)} accent="primary" />
         <StatCard title="Outstanding" value={formatCurrency(stats.outstandingRevenue, organization.currency)} accent="rental" />
         <StatCard title="Invoices" value={stats.totalInvoices} />
@@ -543,8 +545,8 @@ export default function DashboardPage() {
       {/* Charts & Mockup Panels */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Sales vs rentals bar view */}
-        <Card className="bg-[#202023] border border-zinc-800">
-          <h2 className="text-sm font-semibold text-white mb-4">Sales vs rentals</h2>
+        <Card>
+          <h2 className="text-sm font-semibold text-dark dark:text-white mb-4">Sales vs rentals</h2>
           {stats.salesCount + stats.rentalCount === 0 ? (
             <EmptyChartState />
           ) : (
@@ -554,22 +556,22 @@ export default function DashboardPage() {
                   style={{ height: saleHeight }}
                   className="w-10 bg-[#1E3A8A] rounded transition-all duration-500 hover:opacity-80 shadow-[0_0_15px_rgba(30,58,138,0.2)]"
                 />
-                <span className="text-sm text-zinc-400 font-medium">Sale {stats.salesCount}</span>
+                <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Sale {stats.salesCount}</span>
               </div>
               <div className="flex flex-col items-center gap-3">
                 <div
                   style={{ height: rentalHeight }}
                   className="w-10 bg-[#C05621] rounded transition-all duration-500 hover:opacity-80 shadow-[0_0_15px_rgba(192,86,33,0.2)]"
                 />
-                <span className="text-sm text-zinc-400 font-medium">Rental {stats.rentalCount}</span>
+                <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Rental {stats.rentalCount}</span>
               </div>
             </div>
           )}
         </Card>
 
         {/* Recent Invoices list */}
-        <Card className="bg-[#202023] border border-zinc-800">
-          <h2 className="text-sm font-semibold text-white mb-4">Recent invoices</h2>
+        <Card>
+          <h2 className="text-sm font-semibold text-dark dark:text-white mb-4">Recent invoices</h2>
           {recentInvoices.length === 0 ? (
             <EmptyChartState />
           ) : (
@@ -578,7 +580,7 @@ export default function DashboardPage() {
                 <div
                   key={inv.id}
                   onClick={() => router.push(`/invoice/${inv.id}`)}
-                  className="relative flex items-center justify-between bg-[#1A1A1C] hover:bg-zinc-800/80 p-3 pl-5 rounded-xl border border-zinc-800/60 cursor-pointer transition-all"
+                  className="relative flex items-center justify-between bg-slate-50 dark:bg-[#1A1A1C] hover:bg-slate-100 dark:hover:bg-zinc-800/80 p-3 pl-5 rounded-xl border border-slate-200 dark:border-zinc-800/60 cursor-pointer transition-all"
                 >
                   <div
                     className={`absolute left-0 top-3 bottom-3 w-1 rounded-r-md ${
@@ -586,8 +588,8 @@ export default function DashboardPage() {
                     }`}
                   />
                   <div className="flex items-center gap-6">
-                    <span className="font-mono font-bold text-zinc-100 text-sm">{inv.invoice_number}</span>
-                    <span className="text-zinc-400 text-sm hidden sm:inline">
+                    <span className="font-mono font-bold text-dark dark:text-zinc-100 text-sm">{inv.invoice_number}</span>
+                    <span className="text-zinc-550 dark:text-zinc-400 text-sm hidden sm:inline">
                       {Array.isArray(inv.customers)
                         ? inv.customers[0]?.name
                         : inv.customers?.name || 'N/A'}
@@ -601,7 +603,7 @@ export default function DashboardPage() {
                           : inv.status === 'partial'
                           ? 'bg-purple-500'
                           : inv.status === 'draft'
-                          ? 'bg-zinc-500'
+                          ? 'bg-zinc-450 dark:bg-zinc-500'
                           : inv.status === 'overdue'
                           ? 'bg-amber-500'
                           : 'bg-red-500'
@@ -618,8 +620,8 @@ export default function DashboardPage() {
       {/* Insights */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Revenue Trend line chart */}
-        <Card className="bg-[#202023] border border-zinc-800">
-          <h2 className="text-sm font-semibold text-white mb-4">Revenue trend (Paid Invoices)</h2>
+        <Card>
+          <h2 className="text-sm font-semibold text-dark dark:text-white mb-4">Revenue trend (Paid Invoices)</h2>
           {revenueData.length === 0 ? (
             <EmptyChartState />
           ) : (
@@ -627,7 +629,7 @@ export default function DashboardPage() {
               <LineChart data={revenueData}>
                 <XAxis dataKey="date" stroke="#71717A" fontSize={11} />
                 <YAxis stroke="#71717A" fontSize={11} />
-                <Tooltip contentStyle={{ backgroundColor: '#202023', borderColor: '#3F3F46' }} />
+                <Tooltip contentStyle={{ backgroundColor: theme === 'dark' ? '#202023' : '#ffffff', borderColor: theme === 'dark' ? '#3F3F46' : '#e2e8f0', color: theme === 'dark' ? '#ffffff' : '#0f172a' }} />
                 <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
@@ -635,16 +637,16 @@ export default function DashboardPage() {
         </Card>
 
         {/* Top Customers list */}
-        <Card className="bg-[#202023] border border-zinc-800">
-          <h2 className="text-sm font-semibold text-white mb-4">Top Customers</h2>
+        <Card>
+          <h2 className="text-sm font-semibold text-dark dark:text-white mb-4">Top Customers</h2>
           {topCustomers.length === 0 ? (
             <p className="text-sm text-zinc-500 py-12 text-center">No paid invoices yet.</p>
           ) : (
             <div className="space-y-3 pt-2">
               {topCustomers.map((c, i) => (
-                <div key={i} className="flex justify-between text-sm border-b border-zinc-800/50 pb-2 last:border-0 last:pb-0">
-                  <span className="text-zinc-200">{c.name}</span>
-                  <span className="font-mono font-bold text-white">{formatCurrency(c.total, organization.currency)}</span>
+                <div key={i} className="flex justify-between text-sm border-b border-slate-200 dark:border-zinc-800/50 pb-2 last:border-0 last:pb-0">
+                  <span className="text-zinc-650 dark:text-zinc-200">{c.name}</span>
+                  <span className="font-mono font-bold text-dark dark:text-white">{formatCurrency(c.total, organization.currency)}</span>
                 </div>
               ))}
             </div>
@@ -665,16 +667,17 @@ function StatCard({
   accent?: 'primary' | 'rental'
 }) {
   return (
-    <div className="bg-[#202023] p-5 rounded-2xl border border-zinc-800">
-      <p className="text-sm text-zinc-400">{title}</p>
+    <div className="bg-white dark:bg-[#202023] p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm transition-colors duration-200">
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">{title}</p>
       <p
-        className={`text-xl font-bold font-mono mt-1 ${
+        className={`text-lg sm:text-xl font-bold font-mono mt-1 truncate tracking-tight ${
           accent === 'primary' 
             ? 'text-blue-500' 
             : accent === 'rental' 
               ? 'text-orange-500' 
-              : 'text-white'
+              : 'text-dark dark:text-white'
         }`}
+        title={String(value)}
       >
         {value}
       </p>

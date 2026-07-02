@@ -5,20 +5,25 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+  --border: #e2e8f0;
+  --muted: #64748b;
+}
+
+.dark {
+  --background: #121214;
+  --foreground: #ffffff;
+  --border: #27272a;
+  --muted: #a1a1aa;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui;
+  --font-display: var(--font-plus-jakarta), ui-sans-serif, system-ui;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular;
 }
 
 @theme {
@@ -27,15 +32,16 @@
   --color-deepgreen: #355834;
   --color-lightgreen: #8BB174;
   --color-green: #71B48D;
- 
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui;
 }
 
 body {
-  background: #F8FAFC;
-  color: #0F172A;
-}
-
-.dark body {
-  background: #121214;
-  color: #ffffff;
+  background: var(--background);
+  color: var(--foreground);
+  transition-property: background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
 }

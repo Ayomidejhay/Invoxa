@@ -71,19 +71,19 @@ const Page = () => {
   const [activeTab, setActiveTab] = useState('business')
 
   return (
-    <div className="mx-auto bg-[#1E1E1E] text-white space-y-6">
-      <h1 className="text-2xl font-bold text-white mb-6">Settings</h1>
+    <div className="mx-auto text-dark dark:text-white space-y-6">
+      <h1 className="text-2xl font-bold text-dark dark:text-white mb-6">Settings</h1>
 
       {/* Tabs */}
-      <div className="border-b border-zinc-800 flex gap-6">
+      <div className="border-b border-slate-200 dark:border-zinc-800 flex gap-6">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`pb-3 text-sm font-semibold transition relative cursor-pointer ${
               activeTab === tab.id
-                ? 'text-blue-400'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-zinc-550 hover:text-zinc-850 dark:text-zinc-400 dark:hover:text-zinc-200'
             }`}
           >
             {tab.label}

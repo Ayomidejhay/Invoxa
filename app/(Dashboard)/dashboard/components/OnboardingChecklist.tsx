@@ -60,7 +60,7 @@ export default function OnboardingChecklist({
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="bg-gradient-to-br from-[#222225] via-[#1E1E21] to-[#161618] border border-zinc-800/80 rounded-2xl p-6 relative overflow-hidden shadow-2xl mb-8"
+      className="bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-[#222225] dark:via-[#1E1E21] dark:to-[#161618] border border-slate-200 dark:border-zinc-800/80 rounded-2xl p-6 relative overflow-hidden shadow-xl dark:shadow-2xl mb-8"
     >
       {/* Ambient Glows */}
       <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -69,19 +69,19 @@ export default function OnboardingChecklist({
       <div className="relative z-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-lg font-bold text-dark dark:text-white flex items-center gap-2">
               Welcome to Invoxa ✨
             </h2>
-            <p className="text-sm text-zinc-400 mt-1">
+            <p className="text-sm text-zinc-550 dark:text-zinc-400 mt-1">
               Complete these three quick steps to start sending invoices and tracking sales or rentals.
             </p>
           </div>
           <div className="flex flex-col items-end gap-1.5 min-w-[200px]">
-            <div className="flex justify-between w-full text-xs font-semibold text-zinc-450">
+            <div className="flex justify-between w-full text-xs font-semibold text-zinc-500 dark:text-zinc-450">
               <span>Setup Progress</span>
-              <span className="text-blue-400 font-bold">{progressPercent}%</span>
+              <span className="text-blue-600 dark:text-blue-400 font-bold">{progressPercent}%</span>
             </div>
-            <div className="h-2 w-full bg-zinc-850 rounded-full overflow-hidden border border-zinc-700/20">
+            <div className="h-2 w-full bg-slate-200 dark:bg-zinc-850 rounded-full overflow-hidden border border-slate-150 dark:border-zinc-700/20">
               <div
                 style={{ width: `${progressPercent}%` }}
                 className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(59,130,246,0.5)]"
@@ -99,10 +99,10 @@ export default function OnboardingChecklist({
                 key={step.id}
                 whileHover={{ y: -2, borderColor: step.completed ? 'rgba(16,185,129,0.3)' : 'rgba(59,130,246,0.3)' }}
                 transition={{ duration: 0.2 }}
-                className={`flex flex-col justify-between p-5 rounded-xl border transition-all h-full bg-[#1A1A1C]/50 relative overflow-hidden group ${
+                className={`flex flex-col justify-between p-5 rounded-xl border transition-all h-full bg-slate-50/50 dark:bg-[#1A1A1C]/50 relative overflow-hidden group ${
                   step.completed
-                    ? 'border-emerald-950/50 hover:bg-[#1C1F1D]/60'
-                    : 'border-zinc-850 hover:bg-[#202023]/60'
+                    ? 'border-emerald-250 dark:border-emerald-950/50 hover:bg-emerald-50/20 dark:hover:bg-[#1C1F1D]/60'
+                    : 'border-slate-200 dark:border-zinc-850 hover:bg-slate-50/60 dark:hover:bg-[#202023]/60'
                 }`}
               >
                 {step.completed && (
@@ -114,39 +114,39 @@ export default function OnboardingChecklist({
                     <div
                       className={`p-2.5 rounded-lg border flex items-center justify-center ${
                         step.completed
-                          ? 'text-emerald-400 bg-emerald-950/30 border-emerald-900/40 shadow-[0_0_10px_rgba(16,185,129,0.1)]'
+                          ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/40 shadow-[0_0_10px_rgba(16,185,129,0.1)]'
                           : showDisabled
-                          ? 'text-zinc-500 bg-zinc-900/40 border-zinc-850'
-                          : 'text-blue-400 bg-blue-950/20 border-blue-900/30 shadow-[0_0_10px_rgba(59,130,246,0.1)]'
+                          ? 'text-zinc-400 dark:text-zinc-500 bg-slate-100 dark:bg-zinc-900/40 border-slate-200 dark:border-zinc-850'
+                          : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 border-blue-100 dark:border-blue-900/30 shadow-[0_0_10px_rgba(59,130,246,0.1)]'
                       }`}
                     >
                       {step.icon}
                     </div>
 
                     {step.completed ? (
-                      <span className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-900/45 font-medium">
+                      <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-900/45 font-medium">
                         <FiCheck size={14} className="stroke-[3]" /> Completed
                       </span>
                     ) : (
-                      <span className="text-xs text-zinc-500 bg-zinc-900/60 px-2.5 py-1 rounded-full border border-zinc-850 font-medium">
+                      <span className="text-xs text-zinc-550 dark:text-zinc-500 bg-slate-150 dark:bg-zinc-900/60 px-2.5 py-1 rounded-full border border-slate-200 dark:border-zinc-850 font-medium">
                         Step {idx + 1}
                       </span>
                     )}
                   </div>
 
-                  <h3 className="font-bold text-white text-base leading-tight mb-2">
+                  <h3 className="font-bold text-dark dark:text-white text-base leading-tight mb-2">
                     {step.title}
                   </h3>
-                  <p className="text-sm text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-550 dark:text-zinc-400 leading-relaxed">
                     {step.description}
                   </p>
                 </div>
 
-                <div className="mt-5 pt-3 border-t border-zinc-900/40">
+                <div className="mt-5 pt-3 border-t border-slate-200 dark:border-zinc-900/40">
                   {step.completed ? (
                     <button
                       onClick={() => router.push(step.actionUrl)}
-                      className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
                     >
                       Manage items <FiArrowRight size={13} />
                     </button>
@@ -154,11 +154,11 @@ export default function OnboardingChecklist({
                     <div className="flex flex-col gap-1">
                       <button
                         disabled
-                        className="w-full text-center py-2.5 px-3 text-xs bg-zinc-900/80 text-zinc-500 border border-zinc-850 rounded-lg cursor-not-allowed font-semibold"
+                        className="w-full text-center py-2.5 px-3 text-xs bg-slate-100 dark:bg-zinc-900/80 text-zinc-400 dark:text-zinc-550 border border-slate-200 dark:border-zinc-850 rounded-lg cursor-not-allowed font-semibold"
                       >
                         {step.actionText}
                       </button>
-                      <span className="text-[10px] text-zinc-500 text-center">{step.disabledReason}</span>
+                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500 text-center">{step.disabledReason}</span>
                     </div>
                   ) : (
                     <button

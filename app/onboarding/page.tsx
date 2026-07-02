@@ -31,7 +31,7 @@ export default async function OnboardingPage({
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-6">
+    <main className="min-h-screen flex items-center justify-center bg-light dark:bg-[#121214] px-6 transition-colors duration-200">
       <OnboardingForm defaultName={profile?.full_name ?? ""} initialToken={token ?? ""} />
     </main>
   );

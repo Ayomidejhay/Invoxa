@@ -104,20 +104,20 @@ export default function OnboardingForm({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl"
+      className="w-full max-w-md bg-white dark:bg-[#1E1E1E] p-8 rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 transition-colors duration-200"
     >
-      <h1 className="text-2xl font-bold text-deepgreen text-center">
+      <h1 className="text-2xl font-bold text-deepgreen dark:text-lightgreen text-center transition-colors">
         {defaultName ? `Welcome, ${defaultName.split(" ")[0]}` : "Welcome to Invoxa"}
       </h1>
-      <p className="text-sm text-muted text-center mt-1 mb-6">
+      <p className="text-sm text-muted dark:text-zinc-400 text-center mt-1 mb-6">
         Let&apos;s get your workspace set up.
       </p>
 
-      <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
+      <div className="flex rounded-xl bg-slate-100 dark:bg-zinc-800 p-1 mb-6 transition-colors duration-200">
         <button
           onClick={() => setMode("create")}
           className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-            mode === "create" ? "bg-white shadow text-deepgreen" : "text-muted"
+            mode === "create" ? "bg-white dark:bg-zinc-700 shadow text-deepgreen dark:text-lightgreen" : "text-muted dark:text-zinc-400"
           }`}
         >
           Create a business
@@ -125,7 +125,7 @@ export default function OnboardingForm({
         <button
           onClick={() => setMode("invite")}
           className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-            mode === "invite" ? "bg-white shadow text-deepgreen" : "text-muted"
+            mode === "invite" ? "bg-white dark:bg-zinc-700 shadow text-deepgreen dark:text-lightgreen" : "text-muted dark:text-zinc-400"
           }`}
         >
           I have an invite
@@ -133,7 +133,7 @@ export default function OnboardingForm({
       </div>
 
       {error && (
-        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="mb-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/25 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
@@ -157,8 +157,8 @@ export default function OnboardingForm({
             placeholder="Paste your invite link"
           />
           {invitePreview && (
-            <p className="text-sm text-muted">
-              You&apos;ll join <strong className="text-dark">{invitePreview.organization_name}</strong> as{" "}
+            <p className="text-sm text-muted dark:text-zinc-400">
+              You&apos;ll join <strong className="text-dark dark:text-white">{invitePreview.organization_name}</strong> as{" "}
               <span className="capitalize">{invitePreview.role}</span>.
             </p>
           )}

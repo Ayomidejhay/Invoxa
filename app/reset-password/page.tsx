@@ -51,8 +51,8 @@ export default function ResetPasswordPage() {
     >
       <div className="space-y-6">
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold text-white tracking-tight">New Password</h1>
-          <p className="text-xs text-zinc-400">Establish a secure password for your profile.</p>
+          <h1 className="text-2xl font-bold text-dark dark:text-white tracking-tight">New Password</h1>
+          <p className="text-xs text-zinc-555 dark:text-zinc-400">Establish a secure password for your profile.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
