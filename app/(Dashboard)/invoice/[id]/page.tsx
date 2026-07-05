@@ -4,7 +4,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { FiArrowLeft } from "react-icons/fi";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useOrganization } from "../../components/OrganizationProvider";
 import type { InvoiceStatus, InvoiceType } from "@/lib/supabase/database.types";
@@ -93,6 +94,7 @@ function PrintStatusBadge({ status }: { status: InvoiceStatus }) {
 
 export default function InvoiceDetailPage() {
   const { id } = useParams() as { id: string };
+  const router = useRouter();
   const supabase = useMemo(() => getSupabaseClient(), []);
   const { organization: org, isOwnerOrAdmin } = useOrganization();
   const toast = useToast();
@@ -281,11 +283,41 @@ export default function InvoiceDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto pb-12 space-y-6">
+      <div className="flex items-center gap-2.5 print:hidden mb-2">
+        <button
+          onClick={() => router.back()}
+          className="inline-flex items-center justify-center p-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#0E0F12] text-zinc-500 hover:text-dark dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
+          aria-label="Back"
+        >
+          <FiArrowLeft size={16} />
+        </button>
+        <span className="text-sm font-semibold text-zinc-550 dark:text-zinc-400">Back to invoices</span>
+      </div>
+
       {/* Printable Invoice Container */}
       <div
         id="invoice"
         className="relative bg-white p-12 space-y-10 border border-[#e2e8f0] rounded-2xl shadow-md overflow-hidden"
       >
+        {/* Subtle Watermark Logo / Initials */}
+        <div 
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12 flex items-center justify-center pointer-events-none select-none z-0 opacity-[0.07] w-[380px] h-[380px]"
+        >
+          {org?.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={org.logo_url}
+              crossOrigin="anonymous"
+              alt="watermark"
+              className="max-w-full max-h-full object-contain"
+            />
+          ) : (
+            <span className="text-[260px] font-black uppercase text-[#0f172a] font-display leading-none">
+              {org?.name ? org.name[0] : "B"}
+            </span>
+          )}
+        </div>
+
         {/* Brand accent — green for sale, amber for rental, matching the badges everywhere else */}
         <div
           className="absolute top-0 left-0 right-0 h-1.5"
@@ -577,7 +609,7 @@ export default function InvoiceDetailPage() {
         )}
 
         {invoice.status !== "paid" && invoice.status !== "void" && (
-          <Button onClick={openPaymentModal} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold px-4 py-2.5">
+          <Button onClick={openPaymentModal} className="font-semibold px-4 py-2.5">
             Record Payment
           </Button>
         )}
@@ -613,7 +645,7 @@ export default function InvoiceDetailPage() {
             <Button variant="outline" onClick={() => setPaymentModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={submitPayment} loading={recordingPayment} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold px-4 py-2.5">
+            <Button onClick={submitPayment} loading={recordingPayment} className="font-semibold px-4 py-2.5">
               Record Payment
             </Button>
           </div>

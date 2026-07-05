@@ -280,7 +280,7 @@ export default function InvoicePage() {
         <h1 className="text-xl font-bold text-dark dark:text-white">Invoices</h1>
         <Button
           onClick={() => router.push('/invoice/create')}
-          className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold px-4 py-2 flex items-center gap-1.5"
+          className="font-semibold px-4 py-2 flex items-center gap-1.5"
         >
           <span>+ Create invoice</span>
         </Button>
@@ -345,7 +345,7 @@ export default function InvoicePage() {
               >
                 <div
                   className={`absolute left-0 top-3 bottom-3 w-1 rounded-r-md ${
-                    inv.type === 'sale' ? 'bg-[#1E3A8A]' : 'bg-[#C05621]'
+                    inv.type === 'sale' ? 'bg-[#355834]' : 'bg-[#C05621]'
                   }`}
                 />
                 <div className="flex justify-between items-start mb-3">
@@ -403,7 +403,7 @@ export default function InvoicePage() {
                     className="border-t border-slate-100 dark:border-zinc-800/80 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 cursor-pointer transition text-zinc-655 dark:text-zinc-300"
                     onClick={() => router.push(`/invoice/${inv.id}`)}
                   >
-                    <td className={`p-4 font-bold text-dark dark:text-white border-l-4 font-mono ${inv.type === 'sale' ? 'border-l-[#1E3A8A]' : 'border-l-[#C05621]'}`}>
+                    <td className={`p-4 font-bold text-dark dark:text-white border-l-4 font-mono ${inv.type === 'sale' ? 'border-l-[#355834]' : 'border-l-[#C05621]'}`}>
                       {inv.invoice_number}
                     </td>
                     <td className="p-4 text-zinc-650 dark:text-zinc-200">{inv.customers?.name}</td>

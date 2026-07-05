@@ -45,7 +45,7 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-50 dark:bg-dark text-slate-600 dark:text-white/70 border-t border-slate-200 dark:border-zinc-800/40 px-6 py-12 transition-colors duration-200">
+    <footer className="bg-slate-50 dark:bg-[#070809] text-slate-600 dark:text-white/70 border-t border-slate-200 dark:border-zinc-800 px-6 py-12 transition-colors duration-200">
       <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8">
         <div>
           <h1 className="text-2xl font-bold text-dark dark:text-white transition-colors">

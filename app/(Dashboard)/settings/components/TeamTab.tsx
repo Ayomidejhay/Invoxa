@@ -510,7 +510,7 @@ export function TeamTab() {
               <option value="staff" className="bg-white dark:bg-[#202023] text-dark dark:text-white">Staff</option>
               <option value="admin" className="bg-white dark:bg-[#202023] text-dark dark:text-white">Admin</option>
             </Select>
-            <Button type="submit" loading={inviting} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold px-6 py-2.5">
+            <Button type="submit" loading={inviting} className="font-semibold px-6 py-2.5">
               Send invite
             </Button>
           </form>

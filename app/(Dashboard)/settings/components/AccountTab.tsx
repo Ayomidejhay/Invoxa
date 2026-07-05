@@ -362,7 +362,7 @@ export function AccountTab() {
           {passwordField('new', 'new_password', 'New Password', 'Enter new password')}
           {passwordField('confirm', 'confirm_password', 'Confirm New Password', 'Confirm new password')}
 
-          <Button onClick={handlePasswordChange} loading={loading} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold py-2.5 px-6">
+          <Button onClick={handlePasswordChange} loading={loading} className="font-semibold py-2.5 px-6">
             Update Password
           </Button>
         </div>

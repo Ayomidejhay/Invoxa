@@ -554,7 +554,7 @@ export default function DashboardPage() {
               <div className="flex flex-col items-center gap-3">
                 <div
                   style={{ height: saleHeight }}
-                  className="w-10 bg-[#1E3A8A] rounded transition-all duration-500 hover:opacity-80 shadow-[0_0_15px_rgba(30,58,138,0.2)]"
+                  className="w-10 bg-[#355834] rounded transition-all duration-500 hover:opacity-80 shadow-[0_0_15px_rgba(53,88,52,0.2)]"
                 />
                 <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Sale {stats.salesCount}</span>
               </div>
@@ -584,7 +584,7 @@ export default function DashboardPage() {
                 >
                   <div
                     className={`absolute left-0 top-3 bottom-3 w-1 rounded-r-md ${
-                      inv.type === 'sale' ? 'bg-[#1E3A8A]' : 'bg-[#C05621]'
+                      inv.type === 'sale' ? 'bg-[#355834]' : 'bg-[#C05621]'
                     }`}
                   />
                   <div className="flex items-center gap-6">
@@ -630,7 +630,7 @@ export default function DashboardPage() {
                 <XAxis dataKey="date" stroke="#71717A" fontSize={11} />
                 <YAxis stroke="#71717A" fontSize={11} />
                 <Tooltip contentStyle={{ backgroundColor: theme === 'dark' ? '#202023' : '#ffffff', borderColor: theme === 'dark' ? '#3F3F46' : '#e2e8f0', color: theme === 'dark' ? '#ffffff' : '#0f172a' }} />
-                <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="revenue" stroke="#71B48D" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -672,7 +672,7 @@ function StatCard({
       <p
         className={`text-lg sm:text-xl font-bold font-mono mt-1 truncate tracking-tight ${
           accent === 'primary' 
-            ? 'text-blue-500' 
+            ? 'text-green-600 dark:text-green-400' 
             : accent === 'rental' 
               ? 'text-orange-500' 
               : 'text-dark dark:text-white'

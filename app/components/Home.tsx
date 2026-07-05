@@ -405,7 +405,7 @@ function InvoicePreviewCard({
   line: string;
   total: string;
   status: string;
-  statusTone: "green" | "blue";
+  statusTone: "green" | "purple";
   rotate: string;
   animateRows?: boolean;
 }) {
@@ -415,7 +415,7 @@ function InvoicePreviewCard({
     return (
       <div
         style={{ transform: rotate }}
-        className="w-64 bg-white border border-border rounded-2xl shadow-xl p-5 space-y-4"
+        className="w-64 bg-white dark:bg-[#0E0F12] border border-border dark:border-zinc-800 rounded-2xl shadow-xl dark:shadow-2xl/40 p-5 space-y-4 text-dark dark:text-white transition-all duration-200"
       >
         {/* Row 1 */}
         <motion.div
@@ -433,7 +433,7 @@ function InvoicePreviewCard({
           </span>
           <span
             className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full ${
-              statusTone === "green" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+              statusTone === "green" ? "bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400" : "bg-purple-100 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400"
             }`}
           >
             {status}
@@ -447,8 +447,8 @@ function InvoicePreviewCard({
           animate="show"
           className="flex justify-between items-center gap-2"
         >
-          <p className="font-mono text-xs text-muted truncate">{number}</p>
-          <p className="font-semibold text-dark truncate text-right">{customer}</p>
+          <p className="font-mono text-xs text-muted dark:text-zinc-550 truncate">{number}</p>
+          <p className="font-semibold text-dark dark:text-zinc-100 truncate text-right">{customer}</p>
         </motion.div>
 
         {/* Row 3 */}
@@ -456,10 +456,10 @@ function InvoicePreviewCard({
           variants={row3Variants}
           initial="hidden"
           animate="show"
-          className="border-t border-border pt-3 flex justify-between items-end gap-2"
+          className="border-t border-border dark:border-zinc-800 pt-3 flex justify-between items-end gap-2"
         >
-          <p className="text-xs text-muted truncate">{line}</p>
-          <p className="font-mono text-lg font-bold text-dark truncate text-right">{total}</p>
+          <p className="text-xs text-muted dark:text-zinc-550 truncate">{line}</p>
+          <p className="font-mono text-lg font-bold text-dark dark:text-white truncate text-right">{total}</p>
         </motion.div>
       </div>
     );
@@ -468,7 +468,7 @@ function InvoicePreviewCard({
   return (
     <div
       style={{ transform: rotate }}
-      className="w-64 bg-white border border-border rounded-2xl shadow-xl p-5 space-y-4"
+      className="w-64 bg-white dark:bg-[#0E0F12] border border-border dark:border-zinc-800 rounded-2xl shadow-xl dark:shadow-2xl/40 p-5 space-y-4 text-dark dark:text-white transition-all duration-200"
     >
       {/* Row 1 */}
       <div className="flex items-center justify-between">
@@ -481,7 +481,7 @@ function InvoicePreviewCard({
         </span>
         <span
           className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full ${
-            statusTone === "green" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+            statusTone === "green" ? "bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400" : "bg-purple-100 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400"
           }`}
         >
           {status}
@@ -490,14 +490,14 @@ function InvoicePreviewCard({
 
       {/* Row 2 */}
       <div className="flex justify-between items-center gap-2">
-        <p className="font-mono text-xs text-muted truncate">{number}</p>
-        <p className="font-semibold text-dark truncate text-right">{customer}</p>
+        <p className="font-mono text-xs text-muted dark:text-zinc-550 truncate">{number}</p>
+        <p className="font-semibold text-dark dark:text-zinc-100 truncate text-right">{customer}</p>
       </div>
 
       {/* Row 3 */}
-      <div className="border-t border-border pt-3 flex justify-between items-end gap-2">
-        <p className="text-xs text-muted truncate">{line}</p>
-        <p className="font-mono text-lg font-bold text-dark truncate text-right">{total}</p>
+      <div className="border-t border-border dark:border-zinc-800 pt-3 flex justify-between items-end gap-2">
+        <p className="text-xs text-muted dark:text-zinc-550 truncate">{line}</p>
+        <p className="font-mono text-lg font-bold text-dark dark:text-white truncate text-right">{total}</p>
       </div>
     </div>
   );
@@ -507,10 +507,10 @@ export default function MainHome() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <main className="bg-light dark:bg-[#121214] text-dark dark:text-white transition-colors duration-200 overflow-hidden">
+    <main className="bg-light dark:bg-[#070809] text-dark dark:text-white transition-colors duration-200 overflow-hidden">
       {/* HERO */}
       <section className="relative pt-40 pb-24 md:pt-48 md:pb-32 px-6">
-        <div className="absolute inset-0 bg-gradient-to-br from-light via-light to-lightgreen/20 dark:from-[#121214] dark:via-[#121214] dark:to-lightgreen/10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-light via-light to-lightgreen/20 dark:from-[#070809] dark:via-[#070809] dark:to-lightgreen/10" />
 
         <div className="relative z-10 max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
           <motion.div variants={fadeUp} initial="hidden" animate="show">
@@ -573,7 +573,7 @@ export default function MainHome() {
                 line="1× Generator · 7 days"
                 total="₦105,000"
                 status="Sent"
-                statusTone="blue"
+                statusTone="purple"
                 rotate="rotate(4deg)"
                 animateRows={true}
               />
@@ -599,7 +599,7 @@ export default function MainHome() {
             <motion.div
               key={i}
               variants={fadeUp}
-              className="p-6 rounded-2xl bg-white dark:bg-[#1E1E1E] border border-border dark:border-zinc-800/80 shadow-sm hover:shadow-md transition-shadow"
+              className="p-6 rounded-2xl bg-white dark:bg-[#0E0F12] border border-border dark:border-zinc-800/80 shadow-sm hover:shadow-md transition-shadow"
             >
               <h3 className="text-xl font-semibold mb-2 text-deepgreen dark:text-lightgreen">{item.title}</h3>
               <p className="text-muted">{item.desc}</p>
@@ -609,7 +609,7 @@ export default function MainHome() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="py-24 px-6 bg-white dark:bg-[#1E1E1E] border-y border-border dark:border-zinc-800/50 transition-colors duration-200">
+      <section className="py-24 px-6 bg-white dark:bg-[#070809] border-y border-border dark:border-zinc-800/50 transition-colors duration-200">
         <div className="max-w-6xl mx-auto">
           <motion.h2
             variants={fadeUp}
@@ -689,7 +689,7 @@ export default function MainHome() {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true }}
-              className={`relative p-8 rounded-2xl bg-white dark:bg-[#1E1E1E] border shadow-sm ${
+              className={`relative p-8 rounded-2xl bg-white dark:bg-[#0E0F12] border shadow-sm ${
                 plan.highlight ? "border-deepgreen dark:border-lightgreen shadow-lg" : "border-border dark:border-zinc-800"
               }`}
             >
@@ -713,7 +713,7 @@ export default function MainHome() {
                 className={`block text-center py-3 rounded-xl font-semibold transition-colors ${
                   plan.highlight
                     ? "bg-deepgreen text-white hover:bg-primary-hover"
-                    : "bg-primary-soft dark:bg-zinc-850 text-deepgreen dark:text-lightgreen hover:bg-lightgreen/30 dark:hover:bg-zinc-800"
+                    : "bg-primary-soft dark:bg-zinc-900 text-deepgreen dark:text-lightgreen hover:bg-lightgreen/30 dark:hover:bg-zinc-800"
                 }`}
               >
                 Choose {plan.name}
@@ -724,7 +724,7 @@ export default function MainHome() {
       </section>
 
       {/* FAQ */}
-      <section className="py-24 px-6 bg-white dark:bg-[#1E1E1E] transition-colors duration-200">
+      <section className="py-24 px-6 bg-white dark:bg-[#070809] transition-colors duration-200">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
             Frequently asked questions
@@ -732,7 +732,7 @@ export default function MainHome() {
 
           <div className="space-y-4">
             {faqs.map((item, i) => (
-              <div key={i} className="border border-border dark:border-zinc-800 rounded-2xl bg-light/50 dark:bg-zinc-900/30 overflow-hidden">
+              <div key={i} className="border border-border dark:border-zinc-800 rounded-2xl bg-light/50 dark:bg-[#0E0F12]/60 overflow-hidden">
                 <button
                   onClick={() => setOpenIndex(openIndex === i ? null : i)}
                   className="w-full flex justify-between items-center p-6 text-left cursor-pointer"

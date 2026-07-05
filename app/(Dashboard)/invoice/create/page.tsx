@@ -11,6 +11,7 @@ import { Select } from "@/app/components/ui/Select";
 import { Textarea } from "@/app/components/ui/Textarea";
 import { Card } from "@/app/components/ui/Card";
 import { formatCurrency } from "@/lib/format";
+import { FiArrowLeft } from "react-icons/fi";
 
 type DraftItem = {
   product_id: string;
@@ -139,6 +140,17 @@ export default function CreateInvoicePage() {
 
   return (
     <div className="space-y-6 w-full text-dark dark:text-white">
+      <div className="flex items-center gap-2.5 mb-2">
+        <button
+          onClick={() => router.back()}
+          className="inline-flex items-center justify-center p-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#0E0F12] text-zinc-500 hover:text-dark dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
+          aria-label="Back"
+        >
+          <FiArrowLeft size={16} />
+        </button>
+        <span className="text-sm font-semibold text-zinc-550 dark:text-zinc-400">Back to invoices</span>
+      </div>
+
       <h1 className="text-xl font-bold text-dark dark:text-white">Create Invoice</h1>
 
       {submitError && (

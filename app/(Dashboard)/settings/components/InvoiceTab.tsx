@@ -269,7 +269,7 @@ export function InvoiceTab() {
           </div>
         </div>
 
-        <Button type="submit" loading={saving} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold px-6 py-2.5">
+        <Button type="submit" loading={saving} className="font-semibold px-6 py-2.5">
           Save Settings
         </Button>
       </form>

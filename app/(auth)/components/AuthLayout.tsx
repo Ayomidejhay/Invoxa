@@ -48,9 +48,8 @@ export default function AuthLayout({ children, title, subtitle, illustration }: 
 
         {/* Branding header */}
         <div className="relative z-10">
-          <Link href="/" className="inline-flex items-center gap-2 text-xl font-bold tracking-tight text-dark dark:text-white hover:opacity-90 transition-opacity">
-            <span className="w-8 h-8 rounded-lg bg-gradient-to-tr from-deepgreen to-green flex items-center justify-center text-white text-sm font-mono shadow-md border border-white/10">I</span>
-            <span>Invoxa</span>
+          <Link href="/" className="text-xl font-bold tracking-tight text-dark dark:text-white hover:opacity-90 transition-opacity">
+            Inv<span className="text-deepgreen dark:text-lightgreen">oxa</span>
           </Link>
         </div>
 

@@ -124,9 +124,44 @@ export async function GET(
             font-family: 'JetBrains Mono', monospace;
           }
 
-          .invoice-container {
+           .invoice-container {
             width: 100%;
             box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+            padding: 48px;
+          }
+
+          /* Watermark background */
+          .watermark-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-12deg);
+            width: 380px;
+            height: 380px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.07;
+            user-select: none;
+          }
+
+          .watermark-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+          }
+
+          .watermark-text {
+            font-size: 260px;
+            font-weight: 800;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #0f172a;
+            text-transform: uppercase;
+            line-height: 1;
           }
 
           /* Header Section */
@@ -221,7 +256,7 @@ export async function GET(
           .info-block {
             text-align: right;
             display: flex;
-            flex-col: column;
+            flex-direction: column;
             align-items: flex-end;
           }
 
@@ -435,14 +470,29 @@ export async function GET(
       </head>
       <body>
         <div class="invoice-container">
+          <div class="watermark-container">
+            ${org?.logo_url ? `
+              <img src="${org.logo_url}" class="watermark-img" crossorigin="anonymous" />
+            ` : `
+              <span class="watermark-text">${org?.name ? org.name[0] : "B"}</span>
+            `}
+          </div>
           
-          <!-- Header info -->
-          <div class="header-row">
-            <div class="org-info">
-              <h1>${org?.name || "Business Name"}</h1>
-              <p>${org?.email || ""}</p>
-              <p>${org?.phone || ""}</p>
-              <p style="margin-top: 4px; font-size: 11px; color: #94a3b8;">${org?.address || ""}</p>
+           <div class="header-row">
+            <div style="display: flex; align-items: center; gap: 16px;">
+              ${org?.logo_url ? `
+                <img src="${org.logo_url}" crossorigin="anonymous" style="width: 56px; height: 56px; object-fit: cover; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);" />
+              ` : `
+                <div style="width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background-color: #0f172a; color: #ffffff; font-weight: 700; font-size: 20px; text-transform: uppercase;">
+                  ${org?.name ? org.name[0] : "B"}
+                </div>
+              `}
+              <div class="org-info">
+                <h1>${org?.name || "Business Name"}</h1>
+                <p>${org?.email || ""}</p>
+                <p>${org?.phone || ""}</p>
+                <p style="margin-top: 4px; font-size: 11px; color: #94a3b8;">${org?.address || ""}</p>
+              </div>
             </div>
             
             <div class="invoice-meta">
@@ -617,7 +667,8 @@ export async function GET(
     });
 
     const page = await browser.newPage();
-    await page.setContent(htmlString, { waitUntil: "domcontentloaded" });
+    await page.setContent(htmlString, { waitUntil: "load" });
+    await page.evaluateHandle(() => document.fonts.ready);
 
     // Print contents to PDF format
     const pdfBuffer = await page.pdf({

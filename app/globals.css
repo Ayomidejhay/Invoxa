@@ -10,10 +10,22 @@
 }
 
 .dark {
-  --background: #121214;
-  --foreground: #ffffff;
-  --border: #27272a;
-  --muted: #a1a1aa;
+  --background: #070809;
+  --foreground: #f8fafc;
+  --border: #1a1b1e;
+  --muted: #82828b;
+}
+
+.dark select,
+.dark input,
+.dark textarea {
+  background-color: #0E0F12 !important;
+  border-color: #1b1c20 !important;
+}
+
+.dark .bg-\[\#202023\],
+.dark .bg-\[\#202023\]\/60 {
+  background-color: #0E0F12 !important;
 }
 
 @theme inline {

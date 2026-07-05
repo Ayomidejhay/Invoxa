@@ -136,13 +136,13 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`hidden md:flex flex-col bg-white dark:bg-[#131E31] text-dark dark:text-white h-screen fixed left-0 top-0 transition-all duration-300 z-40 border-r border-slate-200 dark:border-[#1E293B] ${
+      className={`hidden md:flex flex-col bg-white dark:bg-[#070809] text-dark dark:text-white h-screen fixed left-0 top-0 transition-all duration-300 z-40 border-r border-slate-200 dark:border-zinc-800 ${
         collapsed ? 'w-20' : 'w-64'
       }`}
     >
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-[#1E293B] transition-colors duration-200">
+      <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-zinc-800 transition-colors duration-200">
         {!collapsed && <h1 className="text-lg font-bold tracking-wide text-dark dark:text-white transition-colors duration-200">Invoxa</h1>}
-        <button onClick={() => setCollapsed(!collapsed)} className="p-2 hover:bg-slate-100 dark:hover:bg-[#1E293B] rounded text-slate-500 dark:text-slate-400 hover:text-dark dark:hover:text-white transition cursor-pointer">
+        <button onClick={() => setCollapsed(!collapsed)} className="p-2 hover:bg-slate-100 dark:hover:bg-[#161619] rounded text-slate-500 dark:text-slate-400 hover:text-dark dark:hover:text-white transition cursor-pointer">
           <FiMenu size={20} />
         </button>
       </div>
@@ -152,18 +152,20 @@ export default function Sidebar() {
         <div className="space-y-1.5">
           {navItems.slice(0, 4).map((item) => {
             const Icon = item.icon
-            const isActive = pathname === item.href
+            const isActive = item.href === '/invoice'
+              ? pathname.startsWith('/invoice')
+              : pathname === item.href
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
                   isActive
-                    ? 'bg-slate-100 dark:bg-[#1E2D4A] text-deepgreen dark:text-[#60A5FA] font-semibold'
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B] hover:text-dark dark:hover:text-white'
+                    ? 'bg-slate-100 dark:bg-[#1C2C22] text-deepgreen dark:text-[#8BB174] font-semibold'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#161619] hover:text-dark dark:hover:text-white'
                 }`}
               >
-                <Icon size={20} className={isActive ? 'text-deepgreen dark:text-[#60A5FA]' : 'text-slate-400 dark:text-slate-500'} />
+                <Icon size={20} className={isActive ? 'text-deepgreen dark:text-[#8BB174]' : 'text-slate-400 dark:text-slate-500'} />
                 {!collapsed && <span className="text-sm font-medium">{item.name}</span>}
               </Link>
             )
@@ -174,18 +176,20 @@ export default function Sidebar() {
         <div className="space-y-1.5">
           {navItems.slice(4).map((item) => {
             const Icon = item.icon
-            const isActive = pathname === item.href
+            const isActive = item.href === '/invoice'
+              ? pathname.startsWith('/invoice')
+              : pathname === item.href
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
                   isActive
-                    ? 'bg-slate-100 dark:bg-[#1E2D4A] text-deepgreen dark:text-[#60A5FA] font-semibold'
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B] hover:text-dark dark:hover:text-white'
+                    ? 'bg-slate-100 dark:bg-[#1C2C22] text-deepgreen dark:text-[#8BB174] font-semibold'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#161619] hover:text-dark dark:hover:text-white'
                 }`}
               >
-                <Icon size={20} className={isActive ? 'text-deepgreen dark:text-[#60A5FA]' : 'text-slate-400 dark:text-slate-500'} />
+                <Icon size={20} className={isActive ? 'text-deepgreen dark:text-[#8BB174]' : 'text-slate-400 dark:text-slate-500'} />
                 {!collapsed && <span className="text-sm font-medium">{item.name}</span>}
               </Link>
             )

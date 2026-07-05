@@ -104,7 +104,7 @@ export default function OnboardingForm({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-md bg-white dark:bg-[#1E1E1E] p-8 rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 transition-colors duration-200"
+      className="w-full max-w-md bg-white dark:bg-[#0E0F12] p-8 rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 transition-colors duration-200"
     >
       <h1 className="text-2xl font-bold text-deepgreen dark:text-lightgreen text-center transition-colors">
         {defaultName ? `Welcome, ${defaultName.split(" ")[0]}` : "Welcome to Invoxa"}
@@ -113,11 +113,11 @@ export default function OnboardingForm({
         Let&apos;s get your workspace set up.
       </p>
 
-      <div className="flex rounded-xl bg-slate-100 dark:bg-zinc-800 p-1 mb-6 transition-colors duration-200">
+      <div className="flex rounded-xl bg-slate-100 dark:bg-[#070809] p-1 mb-6 transition-colors duration-200">
         <button
           onClick={() => setMode("create")}
           className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-            mode === "create" ? "bg-white dark:bg-zinc-700 shadow text-deepgreen dark:text-lightgreen" : "text-muted dark:text-zinc-400"
+            mode === "create" ? "bg-white dark:bg-zinc-800 shadow text-deepgreen dark:text-lightgreen" : "text-muted dark:text-zinc-400"
           }`}
         >
           Create a business
@@ -125,7 +125,7 @@ export default function OnboardingForm({
         <button
           onClick={() => setMode("invite")}
           className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-            mode === "invite" ? "bg-white dark:bg-zinc-700 shadow text-deepgreen dark:text-lightgreen" : "text-muted dark:text-zinc-400"
+            mode === "invite" ? "bg-white dark:bg-zinc-800 shadow text-deepgreen dark:text-lightgreen" : "text-muted dark:text-zinc-400"
           }`}
         >
           I have an invite

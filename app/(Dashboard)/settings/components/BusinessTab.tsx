@@ -299,13 +299,13 @@ function BusinessTab() {
               const file = e.target.files?.[0]
               if (file) handleLogoUpload(file)
             }}
-            className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#202023] text-zinc-700 dark:text-zinc-300 p-2.5 rounded-xl w-full text-sm cursor-pointer focus:outline-none file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 dark:file:bg-blue-950/40 file:text-blue-600 dark:file:text-blue-400 hover:file:bg-blue-100 dark:hover:file:bg-blue-950/60"
+            className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#202023] text-zinc-700 dark:text-zinc-300 p-2.5 rounded-xl w-full text-sm cursor-pointer focus:outline-none file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-green-50 dark:file:bg-green-950/20 file:text-deepgreen dark:file:text-lightgreen hover:file:bg-green-100 dark:hover:file:bg-green-950/40"
           />
 
           {uploading && <p className="text-sm text-zinc-400">Uploading...</p>}
         </div>
 
-        <Button type="submit" loading={saving} className="bg-[#1E3A8A] text-white border border-blue-700/50 hover:bg-blue-700 font-semibold px-6 py-2.5">
+        <Button type="submit" loading={saving} className="font-semibold px-6 py-2.5">
           Save Changes
         </Button>
       </form>

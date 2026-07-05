@@ -58,7 +58,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-light dark:bg-[#121214] text-dark dark:text-white transition-colors duration-200">
+      <body className="min-h-full flex flex-col bg-light dark:bg-[#070809] text-dark dark:text-white transition-colors duration-200">
         <ThemeProvider>
           <ToastProvider>{children}</ToastProvider>
         </ThemeProvider>

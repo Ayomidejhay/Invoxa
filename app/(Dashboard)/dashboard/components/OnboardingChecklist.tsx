@@ -63,8 +63,8 @@ export default function OnboardingChecklist({
       className="bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-[#222225] dark:via-[#1E1E21] dark:to-[#161618] border border-slate-200 dark:border-zinc-800/80 rounded-2xl p-6 relative overflow-hidden shadow-xl dark:shadow-2xl mb-8"
     >
       {/* Ambient Glows */}
-      <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-10 -left-10 w-60 h-60 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-0 w-80 h-80 bg-green-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-10 -left-10 w-60 h-60 bg-[#8BB174]/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -79,12 +79,12 @@ export default function OnboardingChecklist({
           <div className="flex flex-col items-end gap-1.5 min-w-[200px]">
             <div className="flex justify-between w-full text-xs font-semibold text-zinc-500 dark:text-zinc-450">
               <span>Setup Progress</span>
-              <span className="text-blue-600 dark:text-blue-400 font-bold">{progressPercent}%</span>
+              <span className="text-deepgreen dark:text-lightgreen font-bold">{progressPercent}%</span>
             </div>
             <div className="h-2 w-full bg-slate-200 dark:bg-zinc-850 rounded-full overflow-hidden border border-slate-150 dark:border-zinc-700/20">
               <div
                 style={{ width: `${progressPercent}%` }}
-                className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+                className="h-full bg-gradient-to-r from-[#355834] via-[#71B48D] to-[#8BB174] rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(113,180,141,0.5)]"
               />
             </div>
           </div>
@@ -97,12 +97,12 @@ export default function OnboardingChecklist({
             return (
               <motion.div
                 key={step.id}
-                whileHover={{ y: -2, borderColor: step.completed ? 'rgba(16,185,129,0.3)' : 'rgba(59,130,246,0.3)' }}
+                whileHover={{ y: -2, borderColor: step.completed ? 'rgba(16,185,129,0.3)' : 'rgba(113,180,141,0.3)' }}
                 transition={{ duration: 0.2 }}
                 className={`flex flex-col justify-between p-5 rounded-xl border transition-all h-full bg-slate-50/50 dark:bg-[#1A1A1C]/50 relative overflow-hidden group ${
                   step.completed
                     ? 'border-emerald-250 dark:border-emerald-950/50 hover:bg-emerald-50/20 dark:hover:bg-[#1C1F1D]/60'
-                    : 'border-slate-200 dark:border-zinc-850 hover:bg-slate-50/60 dark:hover:bg-[#202023]/60'
+                    : 'border-slate-200 dark:border-zinc-850 hover:bg-slate-50/60 dark:hover:bg-[#121316]/60'
                 }`}
               >
                 {step.completed && (
@@ -116,8 +116,8 @@ export default function OnboardingChecklist({
                         step.completed
                           ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/40 shadow-[0_0_10px_rgba(16,185,129,0.1)]'
                           : showDisabled
-                          ? 'text-zinc-400 dark:text-zinc-500 bg-slate-100 dark:bg-zinc-900/40 border-slate-200 dark:border-zinc-850'
-                          : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 border-blue-100 dark:border-blue-900/30 shadow-[0_0_10px_rgba(59,130,246,0.1)]'
+                          ? 'text-zinc-400 dark:text-zinc-550 bg-slate-100 dark:bg-zinc-900/40 border-slate-200 dark:border-zinc-850'
+                          : 'text-deepgreen dark:text-[#8BB174] bg-green-50/50 dark:bg-green-950/20 border-green-150 dark:border-green-900/30 shadow-[0_0_10px_rgba(113,180,141,0.1)]'
                       }`}
                     >
                       {step.icon}
@@ -163,7 +163,7 @@ export default function OnboardingChecklist({
                   ) : (
                     <button
                       onClick={() => router.push(step.actionUrl)}
-                      className="w-full text-center py-2.5 px-3 text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg cursor-pointer transition-all font-semibold shadow-md hover:shadow-lg shadow-blue-950/30"
+                      className="w-full text-center py-2.5 px-3 text-xs bg-gradient-to-r from-[#355834] to-[#71B48D] hover:from-[#2e4c2d] hover:to-[#5ea67c] text-white rounded-lg cursor-pointer transition-all font-semibold shadow-md hover:shadow-lg shadow-green-950/20"
                     >
                       {step.actionText}
                     </button>

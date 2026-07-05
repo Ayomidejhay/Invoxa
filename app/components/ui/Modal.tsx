@@ -39,10 +39,10 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`bg-white dark:bg-[#202023] border dark:border-zinc-800 text-dark dark:text-white rounded-2xl w-full ${sizeClass} max-h-[90vh] overflow-y-auto shadow-xl`}
+        className={`bg-white dark:bg-[#0E0F12] border dark:border-zinc-800 text-dark dark:text-white rounded-2xl w-full ${sizeClass} max-h-[90vh] overflow-y-auto shadow-xl`}
       >
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border dark:border-zinc-800/80 sticky top-0 bg-white dark:bg-[#202023] z-10">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border dark:border-zinc-800/80 sticky top-0 bg-white dark:bg-[#0E0F12] z-10">
             <h2 className="text-lg font-bold text-dark dark:text-white">{title}</h2>
             <button
               onClick={onClose}
