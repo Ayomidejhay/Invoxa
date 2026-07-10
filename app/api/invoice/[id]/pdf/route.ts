@@ -17,17 +17,19 @@ export async function generatePDFBuffer(
     const chromium = chromiumModule.default || chromiumModule;
 
     browser = await puppeteerCore.launch({
-      args: chromium.args,
+      args: [...chromium.args, "--disable-web-security"],
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
-    });
+      ignoreHTTPSErrors: true,
+    } as any);
   } else {
     const { default: localPuppeteer } = await import("puppeteer");
     browser = await localPuppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-web-security"],
+      ignoreHTTPSErrors: true,
+    } as any);
   }
 
   try {
@@ -43,15 +45,23 @@ export async function generatePDFBuffer(
 
     // Set cookies to authenticate session on the page
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").map((pair) => {
-        const [name, ...val] = pair.trim().split("=");
-        return {
-          name,
-          value: val.join("="),
-          domain: new URL(origin).hostname,
-        };
-      });
-      await page.setCookie(...cookies);
+      const cookies = cookieHeader
+        .split(";")
+        .map((pair) => pair.trim())
+        .filter((pair) => pair.length > 0)
+        .map((pair) => {
+          const [name, ...val] = pair.split("=");
+          return {
+            name: name.trim(),
+            value: val.join("=").trim(),
+            domain: new URL(origin).hostname,
+            path: "/",
+            secure: true,
+          };
+        });
+      if (cookies.length > 0) {
+        await page.setCookie(...cookies);
+      }
     }
 
     // Navigate to the actual invoice page

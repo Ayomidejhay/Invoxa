@@ -382,7 +382,8 @@ export default function InvoiceDetailPage() {
     try {
       const response = await fetch(`/api/invoice/${id}/pdf`);
       if (!response.ok) {
-        throw new Error("Failed to generate PDF");
+        const resData = await response.json().catch(() => ({}));
+        throw new Error(resData?.error || "Failed to generate PDF");
       }
       const blob = await response.blob();
       setPdfBlob(blob);
@@ -390,7 +391,7 @@ export default function InvoiceDetailPage() {
       toast.success("PDF downloaded successfully!");
     } catch (err: any) {
       console.error(err);
-      toast.error("Failed to download PDF. Please try again.");
+      toast.error(err.message || "Failed to download PDF. Please try again.");
     } finally {
       setDownloading(false);
     }
