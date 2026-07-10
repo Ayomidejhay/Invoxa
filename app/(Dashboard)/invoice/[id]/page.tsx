@@ -92,6 +92,65 @@ function PrintStatusBadge({ status }: { status: InvoiceStatus }) {
   );
 }
 
+// Convert a Blob to a base64 string (needed for emailing PDF as attachment)
+const blobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+// Client-side PDF generation using html2canvas & jsPDF
+const generateClientPDF = async (elementId: string): Promise<Blob | null> => {
+  try {
+    const { default: html2canvas } = await import("html2canvas");
+    const { jsPDF } = await import("jspdf");
+
+    const element = document.getElementById(elementId);
+    if (!element) return null;
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
+
+    const imgWidth = 210;
+    const pageHeight = 297;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
+      heightLeft -= pageHeight;
+    }
+
+    return pdf.output("blob");
+  } catch (err) {
+    console.error("Client-side PDF generation failed:", err);
+    return null;
+  }
+};
+
 export default function InvoiceDetailPage() {
   const { id } = useParams() as { id: string };
   const router = useRouter();
@@ -150,17 +209,6 @@ export default function InvoiceDetailPage() {
         .eq("currency", invCurrency)
         .maybeSingle();
       setBankAccount(bankAcctData);
-
-      // Pre-generate and cache the PDF in memory to allow native Web Share gesture validation
-      try {
-        const pdfResponse = await fetch(`/api/invoice/${id}/pdf`);
-        if (pdfResponse.ok) {
-          const blob = await pdfResponse.blob();
-          setPdfBlob(blob);
-        }
-      } catch (pdfErr) {
-        console.error("Background PDF generation failed:", pdfErr);
-      }
     }
 
     // Normalize nullable fields from Supabase (which may be null) to match our Invoice type
@@ -199,6 +247,34 @@ export default function InvoiceDetailPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Pre-generate and cache the PDF in memory on the client side
+  useEffect(() => {
+    if (loading || !invoice || !id) return;
+
+    let isMounted = true;
+
+    const generateBgPDF = async () => {
+      // Wait a short moment to ensure the DOM has completely painted and settled
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      if (!isMounted) return;
+
+      try {
+        const blob = await generateClientPDF("invoice");
+        if (blob && isMounted) {
+          setPdfBlob(blob);
+        }
+      } catch (err) {
+        console.error("Background client-side PDF generation failed:", err);
+      }
+    };
+
+    generateBgPDF();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loading, invoice, id, items]);
 
   const grandTotal = useMemo(() => {
     return items.reduce((s, it) => s + (it.total_price || 0), 0);
@@ -310,15 +386,14 @@ export default function InvoiceDetailPage() {
 
     setDownloading(true);
     try {
-      const response = await fetch(`/api/invoice/${id}/pdf`);
-      if (!response.ok) {
-        throw new Error("Failed to generate PDF");
+      const blob = await generateClientPDF("invoice");
+      if (!blob) {
+        throw new Error("Failed to generate PDF client-side");
       }
-      const blob = await response.blob();
       setPdfBlob(blob);
       triggerDownload(blob);
       toast.success("PDF downloaded successfully");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       toast.error("Failed to generate PDF. Please try again.");
     } finally {
@@ -334,9 +409,23 @@ export default function InvoiceDetailPage() {
       .replace(/[^a-zA-Z0-9-_\s.]/g, "_");
     const filename = `invoice-${safeInvoiceNumber}.pdf`;
 
-    // If PDF is not ready yet, we cannot share it synchronously (user gesture will expire).
-    // In this case, we open the WhatsApp link fallback directly so the gesture is used.
-    if (!pdfBlob) {
+    let activeBlob = pdfBlob;
+
+    if (!activeBlob) {
+      setSharing(true);
+      try {
+        activeBlob = await generateClientPDF("invoice");
+        if (activeBlob) {
+          setPdfBlob(activeBlob);
+        }
+      } catch (err) {
+        console.error("Failed to generate PDF on demand:", err);
+      } finally {
+        setSharing(false);
+      }
+    }
+
+    if (!activeBlob) {
       toast.info("Document is still preparing. Opening WhatsApp message fallback...");
       const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
       window.open(waUrl, "_blank");
@@ -344,7 +433,7 @@ export default function InvoiceDetailPage() {
     }
 
     try {
-      const file = new File([pdfBlob], filename, { type: "application/pdf" });
+      const file = new File([activeBlob], filename, { type: "application/pdf" });
 
       // Use Web Share API synchronously to maintain user gesture activation
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -359,7 +448,7 @@ export default function InvoiceDetailPage() {
         toast.info("Direct file sharing not supported. Downloading PDF and launching WhatsApp...");
         
         // Trigger download
-        const url = window.URL.createObjectURL(pdfBlob);
+        const url = window.URL.createObjectURL(activeBlob);
         const link = document.createElement("a");
         link.href = url;
         link.download = filename;
@@ -397,6 +486,19 @@ export default function InvoiceDetailPage() {
     }
     setSendingEmail(true);
     try {
+      let activeBlob = pdfBlob;
+      if (!activeBlob) {
+        activeBlob = await generateClientPDF("invoice");
+        if (activeBlob) {
+          setPdfBlob(activeBlob);
+        }
+      }
+
+      let pdfBase64 = "";
+      if (activeBlob) {
+        pdfBase64 = await blobToBase64(activeBlob);
+      }
+
       const response = await fetch("/api/invoice/send", {
         method: "POST",
         headers: {
@@ -407,6 +509,7 @@ export default function InvoiceDetailPage() {
           clientEmail,
           emailSubject,
           emailBody,
+          pdfBase64,
         }),
       });
 

@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { invoiceId, clientEmail, emailSubject, emailBody } = await req.json();
+    const { invoiceId, clientEmail, emailSubject, emailBody, pdfBase64 } = await req.json();
 
     if (!invoiceId || !clientEmail) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -41,8 +41,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
-    // 2. Generate the PDF buffer directly in memory (avoids internal loopback HTTP fetches)
-    const pdfBuffer = await generatePDFBuffer(invoiceId, supabase);
+    // 2. Obtain the PDF buffer (use client-supplied base64 PDF, or generate server-side if not provided)
+    let pdfBuffer: Buffer;
+    if (pdfBase64) {
+      pdfBuffer = Buffer.from(pdfBase64, "base64");
+    } else {
+      pdfBuffer = await generatePDFBuffer(invoiceId, supabase);
+    }
 
     // 3. Configure the Nodemailer SMTP transport
     const transporter = nodemailer.createTransport({
