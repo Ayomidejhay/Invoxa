@@ -235,6 +235,14 @@ export default function InvoicePage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | InvoiceStatus>('all')
+  const [currencyFilter, setCurrencyFilter] = useState<string>('all')
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
+
+  const uniqueCurrencies = useMemo(() => {
+    const codes = new Set(invoices.map((inv) => inv.currency).filter(Boolean))
+    return Array.from(codes).sort()
+  }, [invoices])
 
   useEffect(() => {
     let isMounted = true
@@ -263,6 +271,24 @@ export default function InvoicePage() {
   const filtered = useMemo(() => {
     return invoices.filter((inv) => {
       if (statusFilter !== 'all' && inv.status !== statusFilter) return false
+      if (currencyFilter !== 'all' && inv.currency !== currencyFilter) return false
+
+      if (startDate) {
+        const invDate = new Date(inv.created_at)
+        const filterStart = new Date(startDate)
+        invDate.setHours(0, 0, 0, 0)
+        filterStart.setHours(0, 0, 0, 0)
+        if (invDate < filterStart) return false
+      }
+
+      if (endDate) {
+        const invDate = new Date(inv.created_at)
+        const filterEnd = new Date(endDate)
+        invDate.setHours(0, 0, 0, 0)
+        filterEnd.setHours(0, 0, 0, 0)
+        if (invDate > filterEnd) return false
+      }
+
       if (!search.trim()) return true
       const q = search.toLowerCase()
       return (
@@ -270,7 +296,7 @@ export default function InvoicePage() {
         inv.customers?.name?.toLowerCase().includes(q)
       )
     })
-  }, [invoices, search, statusFilter])
+  }, [invoices, search, statusFilter, currencyFilter, startDate, endDate])
 
   const { page, setPage, pageCount, pageItems, totalItems, pageSize } = usePagination(filtered, 10)
 
@@ -309,6 +335,50 @@ export default function InvoicePage() {
           <option value="overdue" className="bg-white dark:bg-[#202023] text-dark dark:text-white">Overdue</option>
           <option value="void" className="bg-white dark:bg-[#202023] text-dark dark:text-white">Void</option>
         </Select>
+
+        <Select
+          value={currencyFilter}
+          onChange={(e) => setCurrencyFilter(e.target.value)}
+          className="w-auto bg-white dark:bg-[#202023] border border-slate-200 dark:border-zinc-800 text-dark dark:text-white rounded-lg"
+        >
+          <option value="all" className="bg-white dark:bg-[#202023] text-dark dark:text-white">All currencies</option>
+          {uniqueCurrencies.map((code) => (
+            <option key={code} value={code} className="bg-white dark:bg-[#202023] text-dark dark:text-white">
+              {code}
+            </option>
+          ))}
+        </Select>
+
+        <div className="flex items-center gap-2 bg-white dark:bg-[#202023] border border-slate-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm">
+          <span className="text-zinc-500 font-medium">From:</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="bg-transparent border-0 p-0 text-dark dark:text-white focus:ring-0 focus:outline-none text-sm cursor-pointer"
+          />
+        </div>
+        <div className="flex items-center gap-2 bg-white dark:bg-[#202023] border border-slate-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm">
+          <span className="text-zinc-500 font-medium">To:</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="bg-transparent border-0 p-0 text-dark dark:text-white focus:ring-0 focus:outline-none text-sm cursor-pointer"
+          />
+        </div>
+        {(startDate || endDate) && (
+          <Button
+            variant="outline"
+            onClick={() => {
+              setStartDate('')
+              setEndDate('')
+            }}
+            className="font-semibold px-4 py-2 hover:bg-slate-50 dark:hover:bg-zinc-800"
+          >
+            Clear dates
+          </Button>
+        )}
       </div>
 
       {loading ? (

@@ -8,7 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 import { FiArrowLeft } from "react-icons/fi";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useOrganization } from "../../components/OrganizationProvider";
-import type { InvoiceStatus, InvoiceType } from "@/lib/supabase/database.types";
+import type { InvoiceStatus, InvoiceType, BankAccount } from "@/lib/supabase/database.types";
 import { Button } from "@/app/components/ui/Button";
 import { Modal } from "@/app/components/ui/Modal";
 import { Input } from "@/app/components/ui/Input";
@@ -106,11 +106,20 @@ export default function InvoiceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [voiding, setVoiding] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
 
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentNote, setPaymentNote] = useState("");
   const [recordingPayment, setRecordingPayment] = useState(false);
+
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [clientEmail, setClientEmail] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
 
   const loadInvoice = async () => {
     const { data: inv } = await supabase
@@ -130,6 +139,29 @@ export default function InvoiceDetailPage() {
       .select("*")
       .eq("invoice_id", id)
       .order("created_at", { ascending: false });
+
+    // Fetch currency specific bank details
+    if (inv) {
+      const invCurrency = inv.currency || org.currency || "NGN";
+      const { data: bankAcctData } = await supabase
+        .from("bank_accounts")
+        .select("*")
+        .eq("organization_id", org.id)
+        .eq("currency", invCurrency)
+        .maybeSingle();
+      setBankAccount(bankAcctData);
+
+      // Pre-generate and cache the PDF in memory to allow native Web Share gesture validation
+      try {
+        const pdfResponse = await fetch(`/api/invoice/${id}/pdf`);
+        if (pdfResponse.ok) {
+          const blob = await pdfResponse.blob();
+          setPdfBlob(blob);
+        }
+      } catch (pdfErr) {
+        console.error("Background PDF generation failed:", pdfErr);
+      }
+    }
 
     // Normalize nullable fields from Supabase (which may be null) to match our Invoice type
     // where customer fields expect undefined instead of null
@@ -183,6 +215,7 @@ export default function InvoiceDetailPage() {
   const isRental = invoice.type === "rental";
   const currency = invoice.currency || org.currency || "NGN";
   const balanceDue = invoice.total - invoice.amount_paid;
+  const primaryColor = org?.primary_color || (isRental ? "#B7791F" : "#355834");
 
   const openPaymentModal = () => {
     const remaining = invoice.total - invoice.amount_paid;
@@ -253,6 +286,28 @@ export default function InvoiceDetailPage() {
 
   const downloadPDF = async () => {
     if (!invoice) return;
+
+    const safeInvoiceNumber = (invoice.invoice_number || invoice.id.slice(0, 8))
+      .replace(/[^a-zA-Z0-9-_\s.]/g, "_");
+    const filename = `invoice-${safeInvoiceNumber}.pdf`;
+
+    const triggerDownload = (blob: Blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    };
+
+    if (pdfBlob) {
+      triggerDownload(pdfBlob);
+      toast.success("PDF downloaded successfully");
+      return;
+    }
+
     setDownloading(true);
     try {
       const response = await fetch(`/api/invoice/${id}/pdf`);
@@ -260,24 +315,114 @@ export default function InvoiceDetailPage() {
         throw new Error("Failed to generate PDF");
       }
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-
-      const safeInvoiceNumber = (invoice.invoice_number || invoice.id.slice(0, 8))
-        .replace(/[^a-zA-Z0-9-_\s.]/g, "_");
-
-      link.download = `invoice-${safeInvoiceNumber}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      setPdfBlob(blob);
+      triggerDownload(blob);
       toast.success("PDF downloaded successfully");
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate PDF. Please try again.");
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const shareInvoice = async () => {
+    if (!invoice) return;
+
+    const shareText = `Dear ${invoice.customers?.name || "Customer"},\n\nPlease find attached invoice #${invoice.invoice_number || invoice.id.slice(0, 8)} for your recent transaction.\n\nTotal Amount: ${formatCurrency(invoice.total, currency)}\nRemaining Balance: ${formatCurrency(balanceDue, currency)}\n\nThank you,\nThe ${org.name} Team`;
+    const safeInvoiceNumber = (invoice.invoice_number || invoice.id.slice(0, 8))
+      .replace(/[^a-zA-Z0-9-_\s.]/g, "_");
+    const filename = `invoice-${safeInvoiceNumber}.pdf`;
+
+    // If PDF is not ready yet, we cannot share it synchronously (user gesture will expire).
+    // In this case, we open the WhatsApp link fallback directly so the gesture is used.
+    if (!pdfBlob) {
+      toast.info("Document is still preparing. Opening WhatsApp message fallback...");
+      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+      window.open(waUrl, "_blank");
+      return;
+    }
+
+    try {
+      const file = new File([pdfBlob], filename, { type: "application/pdf" });
+
+      // Use Web Share API synchronously to maintain user gesture activation
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Invoice #${invoice.invoice_number || invoice.id.slice(0, 8)}`,
+          text: shareText,
+        });
+        toast.success("Invoice shared successfully!");
+      } else {
+        // Fallback: Download PDF file & redirect to WhatsApp Web with prefilled message
+        toast.info("Direct file sharing not supported. Downloading PDF and launching WhatsApp...");
+        
+        // Trigger download
+        const url = window.URL.createObjectURL(pdfBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        // Open WhatsApp Web/App
+        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+        window.open(waUrl, "_blank");
+      }
+    } catch (err: any) {
+      console.error(err);
+      if (err.name !== "AbortError") {
+        toast.error(err.message || "Failed to share invoice");
+      }
+    }
+  };
+
+  const openEmailModal = () => {
+    if (!invoice) return;
+    setClientEmail(invoice.customers?.email || "");
+    setEmailSubject(`Invoice #${invoice.invoice_number || invoice.id.slice(0, 8)} from ${org.name}`);
+    setEmailBody(
+      `Dear ${invoice.customers?.name || "Customer"},\n\nPlease find attached invoice #${invoice.invoice_number || invoice.id.slice(0, 8)} for your recent transaction.\n\nTotal Amount: ${formatCurrency(invoice.total, currency)}\nRemaining Balance: ${formatCurrency(balanceDue, currency)}\n\nThank you,\nThe ${org.name} Team`
+    );
+    setEmailModalOpen(true);
+  };
+
+  const submitEmail = async () => {
+    if (!clientEmail) {
+      toast.error("Please enter a valid recipient email address");
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      const response = await fetch("/api/invoice/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          invoiceId: id,
+          clientEmail,
+          emailSubject,
+          emailBody,
+        }),
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData?.error || "Failed to send invoice email");
+      }
+
+      toast.success("Invoice email sent successfully!");
+      setEmailModalOpen(false);
+      loadInvoice();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to send invoice email");
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -318,10 +463,10 @@ export default function InvoiceDetailPage() {
           )}
         </div>
 
-        {/* Brand accent — green for sale, amber for rental, matching the badges everywhere else */}
+        {/* Brand accent — custom primary color, fallback to type color */}
         <div
           className="absolute top-0 left-0 right-0 h-1.5"
-          style={{ background: isRental ? "#B7791F" : "#355834" }}
+          style={{ background: primaryColor }}
         />
 
         {/* PAID / VOID stamp — a real invoice convention, and useful even printed in black & white */}
@@ -377,7 +522,7 @@ export default function InvoiceDetailPage() {
               <PrintTypeBadge type={invoice.type} />
               <PrintStatusBadge status={invoice.status} />
             </div>
-            <h2 className="text-3xl font-light tracking-tight" style={{ color: "#1e293b" }}>INVOICE</h2>
+            <h2 className="text-3xl font-light tracking-tight" style={{ color: primaryColor }}>INVOICE</h2>
             <p className="text-sm font-mono mt-0.5" style={{ color: "#64748b" }}>
               #{invoice.invoice_number || invoice.id.slice(0, 8)}
             </p>
@@ -500,10 +645,10 @@ export default function InvoiceDetailPage() {
             </div>
             <div
               className="flex justify-between font-bold text-base pt-2.5"
-              style={{ color: "#0f172a", borderTop: "1px solid #e2e8f0" }}
+              style={{ color: primaryColor, borderTop: `1px solid ${primaryColor}` }}
             >
               <span>Total</span>
-              <span className="font-mono" style={{ color: "#020617" }}>{formatCurrency(invoice.total ?? grandTotal, currency, { forCanvas: true })}</span>
+              <span className="font-mono" style={{ color: primaryColor }}>{formatCurrency(invoice.total ?? grandTotal, currency, { forCanvas: true })}</span>
             </div>
             {invoice.amount_paid > 0 && (
               <>
@@ -524,22 +669,39 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* Bank & Payment Details */}
-        {(org?.bank_name || org?.account_name || org?.account_number) && (
+        {((bankAccount && (bankAccount.bank_name || bankAccount.account_name || bankAccount.account_number)) ||
+          (org?.bank_name || org?.account_name || org?.account_number)) && (
           <div className="pt-6 space-y-2 text-xs" style={{ borderTop: "1px solid #f1f5f9" }}>
             <h4 className="font-bold uppercase tracking-wider" style={{ color: "#94a3b8" }}>Payment Details</h4>
-            <div className="grid grid-cols-3 gap-6 p-4 rounded-xl" style={{ background: "#f8fafc", border: "1px solid #f1f5f9" }}>
+            <div className={`grid ${bankAccount?.routing_number || bankAccount?.swift_code ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'} gap-6 p-4 rounded-xl`} style={{ background: "#f8fafc", border: "1px solid #f1f5f9" }}>
               <div>
                 <span className="block mb-0.5" style={{ color: "#94a3b8" }}>Bank</span>
-                <span className="font-medium" style={{ color: "#1e293b" }}>{org?.bank_name}</span>
+                <span className="font-medium" style={{ color: "#1e293b" }}>{bankAccount ? bankAccount.bank_name : org?.bank_name}</span>
               </div>
               <div>
                 <span className="block mb-0.5" style={{ color: "#94a3b8" }}>Account Name</span>
-                <span className="font-medium" style={{ color: "#1e293b" }}>{org?.account_name}</span>
+                <span className="font-medium" style={{ color: "#1e293b" }}>{bankAccount ? bankAccount.account_name : org?.account_name}</span>
               </div>
               <div>
                 <span className="block mb-0.5" style={{ color: "#94a3b8" }}>Account Number</span>
-                <span className="font-mono font-bold text-sm tracking-wide" style={{ color: "#0f172a" }}>{org?.account_number}</span>
+                <span className="font-mono font-bold text-sm tracking-wide" style={{ color: "#0f172a" }}>{bankAccount ? bankAccount.account_number : org?.account_number}</span>
               </div>
+              {(bankAccount?.routing_number || bankAccount?.swift_code) && (
+                <div>
+                  {bankAccount?.routing_number && (
+                    <div className="mb-1">
+                      <span className="block text-[10px] text-zinc-400 font-bold uppercase">Routing</span>
+                      <span className="font-mono text-zinc-600 font-semibold">{bankAccount.routing_number}</span>
+                    </div>
+                  )}
+                  {bankAccount?.swift_code && (
+                    <div>
+                      <span className="block text-[10px] text-zinc-400 font-bold uppercase">SWIFT/BIC</span>
+                      <span className="font-mono text-zinc-600 font-semibold">{bankAccount.swift_code}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -553,6 +715,15 @@ export default function InvoiceDetailPage() {
               style={{ color: "#64748b", background: "#fafbfc", border: "1px solid #f8fafc" }}
             >
               {org.payment_terms}
+            </p>
+          </div>
+        )}
+
+        {/* Custom Branding Footer */}
+        {org?.custom_footer && (
+          <div className="pt-6 space-y-1.5 text-xs text-center" style={{ borderTop: "1px solid #f1f5f9" }}>
+            <p className="leading-relaxed whitespace-pre-line text-zinc-500 font-medium">
+              {org.custom_footer}
             </p>
           </div>
         )}
@@ -602,6 +773,16 @@ export default function InvoiceDetailPage() {
           Download PDF
         </Button>
 
+        <Button variant="outline" onClick={shareInvoice} loading={sharing}>
+          Share to WhatsApp
+        </Button>
+
+        {invoice.status !== "void" && (
+          <Button variant="outline" onClick={openEmailModal}>
+            Send Email
+          </Button>
+        )}
+
         {isOwnerOrAdmin && invoice.status !== "void" && (
           <Button variant="danger" onClick={voidInvoice} loading={voiding}>
             Void
@@ -647,6 +828,39 @@ export default function InvoiceDetailPage() {
             </Button>
             <Button onClick={submitPayment} loading={recordingPayment} className="font-semibold px-4 py-2.5">
               Record Payment
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Send Invoice Email Modal */}
+      <Modal open={emailModalOpen} onClose={() => setEmailModalOpen(false)} title="Send Invoice to Client" size="sm">
+        <div className="space-y-4 text-zinc-700 dark:text-zinc-300">
+          <Input
+            label="Client email address"
+            type="email"
+            value={clientEmail}
+            onChange={(e) => setClientEmail(e.target.value)}
+            placeholder="client@example.com"
+          />
+          <Input
+            label="Subject"
+            type="text"
+            value={emailSubject}
+            onChange={(e) => setEmailSubject(e.target.value)}
+          />
+          <Textarea
+            label="Message"
+            value={emailBody}
+            onChange={(e) => setEmailBody(e.target.value)}
+            rows={6}
+          />
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setEmailModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitEmail} loading={sendingEmail} className="font-semibold px-4 py-2.5">
+              Send Email
             </Button>
           </div>
         </div>

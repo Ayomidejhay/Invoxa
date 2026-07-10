@@ -343,6 +343,8 @@ import { Card } from '@/app/components/ui/Card'
 import { SkeletonStatCard } from '@/app/components/ui/Skeleton'
 import { formatCurrency } from '@/lib/format'
 import OnboardingChecklist from './components/OnboardingChecklist'
+import { getExchangeRates, convertAmount } from '@/lib/currency'
+import AIChatDrawer from './components/AIChatDrawer'
 
 type Stats = {
   totalRevenue: number
@@ -401,7 +403,7 @@ export default function DashboardPage() {
       const [invoiceRes, customerRes, productRes, itemsRes] = await Promise.all([
         supabase
           .from('invoices')
-          .select('id, invoice_number, total, amount_paid, status, type, created_at, customers(name)')
+          .select('id, invoice_number, total, amount_paid, status, type, currency, created_at, customers(name)')
           .eq('organization_id', orgId),
 
         supabase.from('customers').select('id').eq('organization_id', orgId),
@@ -415,6 +417,10 @@ export default function DashboardPage() {
       const customers = customerRes.data || []
       const products = productRes.data || []
       const items = itemsRes.data || []
+
+      // Fetch exchange rates relative to base currency
+      const baseCurrency = organization.currency || 'NGN'
+      const rates = await getExchangeRates(baseCurrency)
 
       let totalRevenue = 0
       let outstandingRevenue = 0
@@ -430,10 +436,14 @@ export default function DashboardPage() {
         const paid = inv.amount_paid || 0
         const remaining = inv.total - paid
 
-        totalRevenue += paid
-        outstandingRevenue += remaining
+        // Convert values to base currency
+        const paidInBase = convertAmount(paid, inv.currency, baseCurrency, rates)
+        const remainingInBase = convertAmount(remaining, inv.currency, baseCurrency, rates)
+
+        totalRevenue += paidInBase
+        outstandingRevenue += remainingInBase
         if (paid > 0) {
-          last30Days[date] = (last30Days[date] || 0) + paid
+          last30Days[date] = (last30Days[date] || 0) + paidInBase
         }
 
         if (inv.type === 'sale') salesCount++
@@ -452,7 +462,9 @@ export default function DashboardPage() {
         if (!inv.amount_paid) return
         const cust = inv.customers
         const name = Array.isArray(cust) ? cust[0]?.name : cust?.name || 'Unknown'
-        customerMap[name] = (customerMap[name] || 0) + inv.amount_paid
+        // Convert to base currency
+        const paidInBase = convertAmount(inv.amount_paid, inv.currency, baseCurrency, rates)
+        customerMap[name] = (customerMap[name] || 0) + paidInBase
       })
 
       const topCustomersArray = Object.entries(customerMap)
@@ -534,8 +546,18 @@ export default function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard title="Revenue collected" value={formatCurrency(stats.totalRevenue, organization.currency)} accent="primary" />
-        <StatCard title="Outstanding" value={formatCurrency(stats.outstandingRevenue, organization.currency)} accent="rental" />
+        <StatCard 
+          title="Revenue collected" 
+          value={formatCurrency(stats.totalRevenue, organization.currency)} 
+          accent="primary" 
+          onClick={() => router.push('/dashboard/breakdown?tab=revenue')}
+        />
+        <StatCard 
+          title="Outstanding" 
+          value={formatCurrency(stats.outstandingRevenue, organization.currency)} 
+          accent="rental" 
+          onClick={() => router.push('/dashboard/breakdown?tab=outstanding')}
+        />
         <StatCard title="Invoices" value={stats.totalInvoices} />
         <StatCard title="Customers" value={stats.totalCustomers} />
         <StatCard title="Inventory" value={stats.totalProducts} />
@@ -653,6 +675,7 @@ export default function DashboardPage() {
           )}
         </Card>
       </div>
+      <AIChatDrawer />
     </div>
   )
 }
@@ -661,13 +684,21 @@ function StatCard({
   title,
   value,
   accent,
+  onClick,
 }: {
   title: string
   value: string | number
   accent?: 'primary' | 'rental'
+  onClick?: () => void
 }) {
   return (
-    <div className="bg-white dark:bg-[#202023] p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm transition-colors duration-200">
+    <div 
+      onClick={onClick}
+      className={[
+        "bg-white dark:bg-[#202023] p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm transition-all duration-200",
+        onClick ? "cursor-pointer hover:border-slate-350 dark:hover:border-zinc-700 hover:scale-[1.01] active:scale-[0.99]" : ""
+      ].join(" ")}
+    >
       <p className="text-sm text-zinc-500 dark:text-zinc-400">{title}</p>
       <p
         className={`text-lg sm:text-xl font-bold font-mono mt-1 truncate tracking-tight ${

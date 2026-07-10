@@ -11,7 +11,9 @@ import { Select } from "@/app/components/ui/Select";
 import { Textarea } from "@/app/components/ui/Textarea";
 import { Card } from "@/app/components/ui/Card";
 import { formatCurrency } from "@/lib/format";
-import { FiArrowLeft } from "react-icons/fi";
+import { FiArrowLeft, FiCpu } from "react-icons/fi";
+import { getExchangeRates } from "@/lib/currency";
+import ReceiptParserModal from "./components/ReceiptParserModal";
 
 type DraftItem = {
   product_id: string;
@@ -40,6 +42,7 @@ export default function CreateInvoicePage() {
   });
 
   const [errors, setErrors] = useState<{ customer?: string; items?: string; rental?: string }>({});
+  const [isParserOpen, setIsParserOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -51,8 +54,49 @@ export default function CreateInvoicePage() {
       setProducts(p || []);
     };
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [organization.id]);
+
+  const currencies = [
+    { code: "NGN", label: "Nigerian Naira (₦)" },
+    { code: "USD", label: "US Dollar ($)" },
+    { code: "EUR", label: "Euro (€)" },
+    { code: "GBP", label: "British Pound (£)" },
+    { code: "CAD", label: "Canadian Dollar (CA$)" },
+    { code: "AUD", label: "Australian Dollar (A$)" },
+    { code: "GHS", label: "Ghanaian Cedi (₵)" },
+    { code: "KES", label: "Kenyan Shilling (KSh)" },
+    { code: "ZAR", label: "South African Rand (R)" },
+  ];
+
+  const [invoiceCurrency, setInvoiceCurrency] = useState("NGN");
+  const [rates, setRates] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (organization.currency) {
+      setInvoiceCurrency(organization.currency);
+    }
+  }, [organization.currency]);
+
+  useEffect(() => {
+    const fetchRates = async () => {
+      const base = organization.currency || "NGN";
+      const ratesData = await getExchangeRates(base);
+      setRates(ratesData);
+    };
+    fetchRates();
+  }, [organization.currency]);
+
+  const getConversionFactor = () => {
+    const base = (organization.currency || "NGN").toUpperCase();
+    const target = invoiceCurrency.toUpperCase();
+    if (base === target) return 1.0;
+    return rates[target] || 1.0;
+  };
+
+  const getConvertedPrice = (basePrice: number) => {
+    const factor = getConversionFactor();
+    return Math.round(basePrice * factor * 100) / 100;
+  };
 
   const productById = (id: string) => products.find((p) => p.id === id);
 
@@ -64,16 +108,15 @@ export default function CreateInvoicePage() {
     return diff > 0 ? diff : 0;
   };
 
-  // Client-side total is a *preview only* — create_invoice() on the server
-  // recomputes this authoritatively from current product prices, so a
-  // stale price here can never under/overcharge.
   const getItemTotal = (item: DraftItem) => {
     const product = productById(item.product_id);
     if (!product) return 0;
+    const basePrice = form.type === "sale" ? (product.sale_price || 0) : (product.rental_price || 0);
+    const convertedPrice = getConvertedPrice(basePrice);
     if (form.type === "sale") {
-      return (product.sale_price || 0) * item.quantity;
+      return convertedPrice * item.quantity;
     }
-    return (product.rental_price || 0) * item.quantity * rentalDays();
+    return convertedPrice * item.quantity * rentalDays();
   };
 
   const calculateTotal = () => items.reduce((sum, item) => sum + getItemTotal(item), 0);
@@ -124,18 +167,43 @@ export default function CreateInvoicePage() {
       p_end_date: form.type === "rental" ? form.end_date : null,
       p_due_date: form.due_date || null,
       p_notes: form.notes || null,
+      p_currency: invoiceCurrency,
+      p_conversion_factor: getConversionFactor(),
     });
 
     setLoading(false);
 
     if (error || !invoice) {
-      // Surfaces server-side validation directly — e.g. "Insufficient stock
-      // for Widget (have 2, need 5)" from the create_invoice() function.
       setSubmitError(error?.message || "Failed to create invoice");
       return;
     }
 
     router.push(`/invoice/${invoice.id}`);
+  };
+
+  const handleParseComplete = (data: any) => {
+    const customerId = data.matchedCustomerId || "";
+    const type = data.type || "sale";
+    const dueDate = data.dueDate || "";
+    const notes = data.notes || "";
+
+    setForm((prev) => ({
+      ...prev,
+      customer_id: customerId,
+      type: type as any,
+      due_date: dueDate,
+      notes: notes,
+    }));
+
+    if (data.items && Array.isArray(data.items)) {
+      const mappedItems = data.items.map((item: any) => {
+        return {
+          product_id: item.matchedProductId || "",
+          quantity: item.quantity || 1,
+        };
+      });
+      setItems(mappedItems.length > 0 ? mappedItems : [{ product_id: "", quantity: 1 }]);
+    }
   };
 
   return (
@@ -151,7 +219,17 @@ export default function CreateInvoicePage() {
         <span className="text-sm font-semibold text-zinc-550 dark:text-zinc-400">Back to invoices</span>
       </div>
 
-      <h1 className="text-xl font-bold text-dark dark:text-white">Create Invoice</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-dark dark:text-white">Create Invoice</h1>
+        <Button
+          onClick={() => setIsParserOpen(true)}
+          variant="outline"
+          className="font-semibold px-4 py-2 flex items-center gap-1.5 border-[#355834] text-[#355834] dark:border-green-800 dark:text-green-400 hover:bg-[#355834]/5 transition-colors cursor-pointer"
+        >
+          <FiCpu className="w-4 h-4 animate-pulse text-green-600 dark:text-green-400" />
+          <span>AI Scan Receipt</span>
+        </Button>
+      </div>
 
       {submitError && (
         <div className="rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 px-4 py-3 text-sm text-red-600 dark:text-red-400">
@@ -171,8 +249,8 @@ export default function CreateInvoicePage() {
                 onClick={() => setForm({ ...form, type: t })}
                 className={[
                   "flex-1 rounded-xl border-2 px-4 py-3 text-sm font-semibold transition-colors cursor-pointer text-center",
-                  active && t === "sale" ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400" : "",
-                  active && t === "rental" ? "border-orange-500 bg-orange-50 dark:bg-orange-950/40 text-orange-655 dark:text-orange-400" : "",
+                  active && t === "sale" ? "border-[#355834] bg-[#355834]/10 text-[#355834] dark:text-[#8BB174] dark:bg-[#1C2C22]" : "",
+                  active && t === "rental" ? "border-amber-600 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400" : "",
                   !active ? "border-slate-200 dark:border-zinc-800 text-zinc-550 dark:text-zinc-400 hover:border-slate-300 dark:hover:border-zinc-700 bg-transparent" : "",
                 ].join(" ")}
               >
@@ -182,7 +260,7 @@ export default function CreateInvoicePage() {
           })}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-3 gap-4">
           <Select
             label="Customer"
             value={form.customer_id}
@@ -203,6 +281,18 @@ export default function CreateInvoicePage() {
             value={form.due_date}
             onChange={(e) => setForm({ ...form, due_date: e.target.value })}
           />
+
+          <Select
+            label="Invoice Currency"
+            value={invoiceCurrency}
+            onChange={(e) => setInvoiceCurrency(e.target.value)}
+          >
+            {currencies.map((currency) => (
+              <option key={currency.code} value={currency.code} className="bg-white dark:bg-[#202023] text-dark dark:text-white">
+                {currency.code} - {currency.label}
+              </option>
+            ))}
+          </Select>
         </div>
 
         {form.type === "rental" && (
@@ -227,7 +317,8 @@ export default function CreateInvoicePage() {
           <label className="text-sm font-medium text-zinc-750 dark:text-zinc-200">Items</label>
           {items.map((item, i) => {
             const product = productById(item.product_id);
-            const unitPrice = product ? (form.type === "sale" ? product.sale_price : product.rental_price) : null;
+            const basePrice = product ? (form.type === "sale" ? product.sale_price : product.rental_price) : null;
+            const unitPrice = basePrice != null ? getConvertedPrice(basePrice) : null;
 
             return (
               <div key={i} className="grid md:grid-cols-5 gap-3 items-center border-b border-slate-200 dark:border-zinc-800/30 pb-3 last:border-b-0 last:pb-0">
@@ -256,10 +347,10 @@ export default function CreateInvoicePage() {
                   onChange={(e) => updateItem(i, "quantity", Number(e.target.value))}
                 />
 
-                <div className="text-sm text-zinc-550 dark:text-zinc-400 font-mono">{unitPrice != null ? `${formatCurrency(unitPrice, organization.currency)}/unit` : "—"}</div>
+                <div className="text-sm text-zinc-550 dark:text-zinc-400 font-mono">{unitPrice != null ? `${formatCurrency(unitPrice, invoiceCurrency)}/unit` : "—"}</div>
 
                 <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-dark dark:text-white">{formatCurrency(getItemTotal(item), organization.currency)}</span>
+                  <span className="font-mono font-bold text-dark dark:text-white">{formatCurrency(getItemTotal(item), invoiceCurrency)}</span>
                   {items.length > 1 && (
                     <button onClick={() => removeItem(i)} className="text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 text-sm cursor-pointer transition-colors">
                       Remove
@@ -271,7 +362,7 @@ export default function CreateInvoicePage() {
           })}
           {errors.items && <p className="text-red-650 dark:text-red-400 text-sm">{errors.items}</p>}
 
-          <button onClick={addItem} className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 text-sm font-semibold cursor-pointer transition-colors">
+          <button onClick={addItem} className="text-[#355834] dark:text-[#8BB174] hover:text-emerald-700 text-sm font-semibold cursor-pointer transition-colors">
             + Add another item
           </button>
         </div>
@@ -284,13 +375,19 @@ export default function CreateInvoicePage() {
 
         <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-zinc-800">
           <span className="text-sm text-zinc-550 dark:text-zinc-400 font-medium">Total</span>
-          <span className="text-2xl font-bold font-mono text-dark dark:text-white">{formatCurrency(calculateTotal(), organization.currency)}</span>
+          <span className="text-2xl font-bold font-mono text-dark dark:text-white">{formatCurrency(calculateTotal(), invoiceCurrency)}</span>
         </div>
 
         <Button onClick={handleSubmit} loading={loading} fullWidth size="lg" className="py-3 transition-colors">
           Create Invoice
         </Button>
       </Card>
+
+      <ReceiptParserModal
+        open={isParserOpen}
+        onClose={() => setIsParserOpen(false)}
+        onParseComplete={handleParseComplete}
+      />
     </div>
   );
 }

@@ -36,6 +36,8 @@ export interface Database {
           account_number: string | null;
           next_invoice_seq: number;
           default_deposit_percentage: number | null;
+          primary_color: string | null;
+          custom_footer: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -44,6 +46,36 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["organizations"]["Row"]>;
         Relationships: [];
+      };
+      bank_accounts: {
+        Row: {
+          id: string;
+          organization_id: string;
+          currency: string;
+          bank_name: string;
+          account_name: string;
+          account_number: string;
+          routing_number: string | null;
+          swift_code: string | null;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["bank_accounts"]["Row"]> & {
+          organization_id: string;
+          currency: string;
+          bank_name: string;
+          account_name: string;
+          account_number: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["bank_accounts"]["Row"]>;
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       profiles: {
         Row: {
@@ -321,6 +353,8 @@ export interface Database {
           p_end_date?: string | null;
           p_due_date?: string | null;
           p_notes?: string | null;
+          p_currency?: string | null;
+          p_conversion_factor?: number | null;
         };
         Returns: Database["public"]["Tables"]["invoices"]["Row"];
       };
@@ -351,3 +385,4 @@ export type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 export type InvoiceItem = Database["public"]["Tables"]["invoice_items"]["Row"];
 export type StockMovement = Database["public"]["Tables"]["stock_movements"]["Row"];
 export type Payment = Database["public"]["Tables"]["payments"]["Row"];
+export type BankAccount = Database["public"]["Tables"]["bank_accounts"]["Row"];
