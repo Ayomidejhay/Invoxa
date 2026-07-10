@@ -46,7 +46,9 @@ export async function POST(req: Request) {
     if (pdfBase64) {
       pdfBuffer = Buffer.from(pdfBase64, "base64");
     } else {
-      pdfBuffer = await generatePDFBuffer(invoiceId, supabase);
+      const cookieHeader = req.headers.get("cookie") || "";
+      const origin = new URL(req.url).origin;
+      pdfBuffer = await generatePDFBuffer(invoiceId, supabase, cookieHeader, origin);
     }
 
     // 3. Configure the Nodemailer SMTP transport

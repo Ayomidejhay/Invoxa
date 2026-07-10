@@ -378,24 +378,19 @@ export default function InvoiceDetailPage() {
       window.URL.revokeObjectURL(url);
     };
 
-    if (pdfBlob) {
-      triggerDownload(pdfBlob);
-      toast.success("PDF downloaded successfully");
-      return;
-    }
-
     setDownloading(true);
     try {
-      const blob = await generateClientPDF("invoice");
-      if (!blob) {
-        throw new Error("Failed to generate PDF client-side");
+      const response = await fetch(`/api/invoice/${id}/pdf`);
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF");
       }
+      const blob = await response.blob();
       setPdfBlob(blob);
       triggerDownload(blob);
-      toast.success("PDF downloaded successfully");
+      toast.success("PDF downloaded successfully!");
     } catch (err: any) {
       console.error(err);
-      toast.error("Failed to generate PDF. Please try again.");
+      toast.error("Failed to download PDF. Please try again.");
     } finally {
       setDownloading(false);
     }
