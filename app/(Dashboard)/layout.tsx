@@ -66,7 +66,7 @@ export default async function DashboardLayout({
           <MainContent>
             <Topbar email={user.email} />
 
-            <main className="flex-1 bg-white dark:bg-[#070809] p-6 overflow-y-auto transition-colors duration-200">
+            <main className="flex-1 min-w-0 bg-white dark:bg-[#070809] p-6 overflow-y-auto transition-colors duration-200">
               {children}
             </main>
           </MainContent>

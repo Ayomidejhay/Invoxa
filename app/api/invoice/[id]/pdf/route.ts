@@ -66,13 +66,27 @@ export async function generatePDFBuffer(
 
     // Navigate to the actual invoice page
     const invoicePageUrl = `${origin}/invoice/${invoiceId}`;
-    await page.goto(invoicePageUrl, { waitUntil: "networkidle0" });
+    await page.goto(invoicePageUrl, { waitUntil: "domcontentloaded" });
 
     // Wait for the invoice element to load and render completely
     await page.waitForSelector("#invoice", { timeout: 15000 });
 
     // Wait for all fonts to load
     await page.evaluateHandle(() => document.fonts.ready);
+
+    // Wait for all images to load completely
+    await page.evaluate(async () => {
+      const images = Array.from(document.querySelectorAll("img"));
+      await Promise.all(
+        images.map((img) => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((resolve) => {
+            img.addEventListener("load", resolve);
+            img.addEventListener("error", resolve); // resolve anyway on error to prevent hanging
+          });
+        })
+      );
+    });
 
     // Emulate print media style
     await page.emulateMediaType("print");

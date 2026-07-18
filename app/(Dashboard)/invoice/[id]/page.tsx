@@ -92,64 +92,7 @@ function PrintStatusBadge({ status }: { status: InvoiceStatus }) {
   );
 }
 
-// Convert a Blob to a base64 string (needed for emailing PDF as attachment)
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result as string;
-      const base64 = dataUrl.split(",")[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
 
-// Client-side PDF generation using html2canvas & jsPDF
-const generateClientPDF = async (elementId: string): Promise<Blob | null> => {
-  try {
-    const { default: html2canvas } = await import("html2canvas");
-    const { jsPDF } = await import("jspdf");
-
-    const element = document.getElementById(elementId);
-    if (!element) return null;
-
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-    });
-
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-    });
-
-    const imgWidth = 210;
-    const pageHeight = 297;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
-
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
-      heightLeft -= pageHeight;
-    }
-
-    return pdf.output("blob");
-  } catch (err) {
-    console.error("Client-side PDF generation failed:", err);
-    return null;
-  }
-};
 
 export default function InvoiceDetailPage() {
   const { id } = useParams() as { id: string };
@@ -248,24 +191,21 @@ export default function InvoiceDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Pre-generate and cache the PDF in memory on the client side
+  // Pre-generate and cache the PDF in memory on the client side from the server
   useEffect(() => {
     if (loading || !invoice || !id) return;
 
     let isMounted = true;
 
     const generateBgPDF = async () => {
-      // Wait a short moment to ensure the DOM has completely painted and settled
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      if (!isMounted) return;
-
       try {
-        const blob = await generateClientPDF("invoice");
-        if (blob && isMounted) {
+        const response = await fetch(`/api/invoice/${id}/pdf`);
+        if (response.ok && isMounted) {
+          const blob = await response.blob();
           setPdfBlob(blob);
         }
       } catch (err) {
-        console.error("Background client-side PDF generation failed:", err);
+        console.error("Background server-side PDF generation failed:", err);
       }
     };
 
@@ -410,8 +350,9 @@ export default function InvoiceDetailPage() {
     if (!activeBlob) {
       setSharing(true);
       try {
-        activeBlob = await generateClientPDF("invoice");
-        if (activeBlob) {
+        const response = await fetch(`/api/invoice/${id}/pdf`);
+        if (response.ok) {
+          activeBlob = await response.blob();
           setPdfBlob(activeBlob);
         }
       } catch (err) {
@@ -421,47 +362,47 @@ export default function InvoiceDetailPage() {
       }
     }
 
-    if (!activeBlob) {
-      toast.info("Document is still preparing. Opening WhatsApp message fallback...");
-      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-      window.open(waUrl, "_blank");
-      return;
-    }
-
-    try {
+    if (activeBlob) {
       const file = new File([activeBlob], filename, { type: "application/pdf" });
 
-      // Use Web Share API synchronously to maintain user gesture activation
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Invoice #${invoice.invoice_number || invoice.id.slice(0, 8)}`,
-          text: shareText,
-        });
-        toast.success("Invoice shared successfully!");
-      } else {
-        // Fallback: Download PDF file & redirect to WhatsApp Web with prefilled message
-        toast.info("Direct file sharing not supported. Downloading PDF and launching WhatsApp...");
-        
-        // Trigger download
-        const url = window.URL.createObjectURL(activeBlob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // Open WhatsApp Web/App
-        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-        window.open(waUrl, "_blank");
+      // Use Web Share API if supported and on a mobile device
+      if (isMobile && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `Invoice #${invoice.invoice_number || invoice.id.slice(0, 8)}`,
+            text: shareText,
+          });
+          toast.success("Invoice shared successfully!");
+          return;
+        } catch (err: any) {
+          if (err.name === "AbortError") {
+            // User cancelled native sharing
+            return;
+          }
+          console.error("Native sharing failed:", err);
+        }
       }
-    } catch (err: any) {
-      console.error(err);
-      if (err.name !== "AbortError") {
-        toast.error(err.message || "Failed to share invoice");
-      }
+
+      // Desktop/Fallback: Trigger download and open WhatsApp Web/App
+      const url = window.URL.createObjectURL(activeBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+      window.open(waUrl, "_blank");
+      toast.info("Invoice PDF downloaded. You can now attach it in the opened WhatsApp tab.");
+    } else {
+      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+      window.open(waUrl, "_blank");
+      toast.error("Could not generate invoice PDF file. WhatsApp has been opened with text only.");
     }
   };
 
@@ -482,19 +423,6 @@ export default function InvoiceDetailPage() {
     }
     setSendingEmail(true);
     try {
-      let activeBlob = pdfBlob;
-      if (!activeBlob) {
-        activeBlob = await generateClientPDF("invoice");
-        if (activeBlob) {
-          setPdfBlob(activeBlob);
-        }
-      }
-
-      let pdfBase64 = "";
-      if (activeBlob) {
-        pdfBase64 = await blobToBase64(activeBlob);
-      }
-
       const response = await fetch("/api/invoice/send", {
         method: "POST",
         headers: {
@@ -505,7 +433,6 @@ export default function InvoiceDetailPage() {
           clientEmail,
           emailSubject,
           emailBody,
-          pdfBase64,
         }),
       });
 
@@ -526,7 +453,7 @@ export default function InvoiceDetailPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto pb-12 space-y-6">
+    <div className="max-w-4xl w-full mx-auto px-4 md:px-0 pb-12 space-y-6">
       <div className="flex items-center gap-2.5 print:hidden mb-2">
         <button
           onClick={() => router.back()}
@@ -538,11 +465,12 @@ export default function InvoiceDetailPage() {
         <span className="text-sm font-semibold text-zinc-550 dark:text-zinc-400">Back to invoices</span>
       </div>
 
-      {/* Printable Invoice Container */}
-      <div
-        id="invoice"
-        className="relative bg-white p-12 space-y-10 border border-[#e2e8f0] rounded-2xl shadow-md overflow-hidden"
-      >
+      {/* Scrollable Wrapper to make sure only the invoice overflows on mobile */}
+      <div className="w-full overflow-x-auto pb-4 print:overflow-visible">
+        <div
+          id="invoice"
+          className="relative bg-white p-6 md:p-12 space-y-10 border border-[#e2e8f0] rounded-2xl shadow-md overflow-hidden min-w-[768px] md:min-w-0"
+        >
         {/* Subtle Watermark Logo / Initials */}
         <div 
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12 flex items-center justify-center pointer-events-none select-none z-0 opacity-[0.07] w-[380px] h-[380px]"
@@ -835,6 +763,7 @@ export default function InvoiceDetailPage() {
           </div>
         )}
       </div>
+      </div>
 
       {confirmDialog}
 
@@ -863,34 +792,66 @@ export default function InvoiceDetailPage() {
       )}
 
       {/* Actions (hidden on print) */}
-      <div className="flex justify-end gap-3 print:hidden">
-        <Button variant="outline" onClick={() => window.print()}>
-          Print
-        </Button>
+      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end print:hidden">
+        {invoice.status !== "paid" && invoice.status !== "void" && (
+          <Button
+            onClick={openPaymentModal}
+            className="col-span-2 w-full sm:w-auto font-semibold px-4 py-2.5"
+          >
+            Record Payment
+          </Button>
+        )}
 
-        <Button variant="outline" onClick={downloadPDF} loading={downloading}>
-          Download PDF
-        </Button>
-
-        <Button variant="outline" onClick={shareInvoice} loading={sharing}>
+        <Button
+          variant="outline"
+          onClick={shareInvoice}
+          loading={sharing}
+          className="col-span-2 w-full sm:w-auto font-medium"
+        >
           Share to WhatsApp
         </Button>
 
+        <Button
+          variant="outline"
+          onClick={downloadPDF}
+          loading={downloading}
+          className="col-span-1 w-full sm:w-auto"
+        >
+          Download PDF
+        </Button>
+
         {invoice.status !== "void" && (
-          <Button variant="outline" onClick={openEmailModal}>
+          <Button
+            variant="outline"
+            onClick={openEmailModal}
+            className="col-span-1 w-full sm:w-auto"
+          >
             Send Email
           </Button>
         )}
 
-        {isOwnerOrAdmin && invoice.status !== "void" && (
-          <Button variant="danger" onClick={voidInvoice} loading={voiding}>
-            Void
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          onClick={() => window.print()}
+          className={`w-full sm:w-auto ${
+            invoice.status === "void"
+              ? "col-span-1"
+              : !isOwnerOrAdmin
+              ? "col-span-2"
+              : "col-span-1"
+          }`}
+        >
+          Print
+        </Button>
 
-        {invoice.status !== "paid" && invoice.status !== "void" && (
-          <Button onClick={openPaymentModal} className="font-semibold px-4 py-2.5">
-            Record Payment
+        {isOwnerOrAdmin && invoice.status !== "void" && (
+          <Button
+            variant="danger"
+            onClick={voidInvoice}
+            loading={voiding}
+            className="col-span-1 w-full sm:w-auto"
+          >
+            Void
           </Button>
         )}
       </div>
@@ -972,6 +933,8 @@ export default function InvoiceDetailPage() {
             background: #fff !important;
             height: auto !important;
             overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           /* Hide sidebars, navigation, and top bars */
           aside, header, nav, .print\:hidden {
@@ -998,6 +961,9 @@ export default function InvoiceDetailPage() {
             padding: 0 !important;
             margin: 0 !important;
             overflow: visible !important;
+            min-width: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
       `}</style>
