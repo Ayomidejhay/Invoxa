@@ -345,8 +345,56 @@ export default function InvoiceDetailPage() {
       .replace(/[^a-zA-Z0-9-_\s.]/g, "_");
     const filename = `invoice-${safeInvoiceNumber}.pdf`;
 
-    let activeBlob = pdfBlob;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
+    // On mobile, use native Web Share API to send the PDF file + text together
+    if (isMobile && navigator.share && navigator.canShare) {
+      setSharing(true);
+      let activeBlob = pdfBlob;
+      if (!activeBlob) {
+        try {
+          const response = await fetch(`/api/invoice/${id}/pdf`);
+          if (response.ok) {
+            activeBlob = await response.blob();
+            setPdfBlob(activeBlob);
+          }
+        } catch (err) {
+          console.error("Failed to generate PDF on demand:", err);
+        }
+      }
+
+      if (activeBlob) {
+        const file = new File([activeBlob], filename, { type: "application/pdf" });
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: `Invoice #${invoice.invoice_number || invoice.id.slice(0, 8)}`,
+              text: shareText,
+            });
+            toast.success("Invoice shared successfully!");
+            setSharing(false);
+            return;
+          } catch (err: any) {
+            if (err.name === "AbortError") {
+              setSharing(false);
+              return;
+            }
+            console.error("Native sharing failed, falling back to window.open:", err);
+          }
+        }
+      }
+      setSharing(false);
+    }
+
+    // Desktop/Fallback: Open WhatsApp Web/App synchronously to bypass browser popup blockers
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+    window.open(waUrl, "_blank");
+
+    toast.info("Opening WhatsApp and downloading the invoice PDF. Please select your contact in WhatsApp, send the text, and then attach the downloaded PDF.");
+
+    // Download the PDF in the background
+    let activeBlob = pdfBlob;
     if (!activeBlob) {
       setSharing(true);
       try {
@@ -363,30 +411,6 @@ export default function InvoiceDetailPage() {
     }
 
     if (activeBlob) {
-      const file = new File([activeBlob], filename, { type: "application/pdf" });
-
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-      // Use Web Share API if supported and on a mobile device
-      if (isMobile && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: `Invoice #${invoice.invoice_number || invoice.id.slice(0, 8)}`,
-            text: shareText,
-          });
-          toast.success("Invoice shared successfully!");
-          return;
-        } catch (err: any) {
-          if (err.name === "AbortError") {
-            // User cancelled native sharing
-            return;
-          }
-          console.error("Native sharing failed:", err);
-        }
-      }
-
-      // Desktop/Fallback: Trigger download and open WhatsApp Web/App
       const url = window.URL.createObjectURL(activeBlob);
       const link = document.createElement("a");
       link.href = url;
@@ -395,14 +419,8 @@ export default function InvoiceDetailPage() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
-      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-      window.open(waUrl, "_blank");
-      toast.info("Invoice PDF downloaded. You can now attach it in the opened WhatsApp tab.");
     } else {
-      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-      window.open(waUrl, "_blank");
-      toast.error("Could not generate invoice PDF file. WhatsApp has been opened with text only.");
+      toast.error("Could not generate invoice PDF file. Please download it manually.");
     }
   };
 
