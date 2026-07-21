@@ -348,7 +348,7 @@ export default function InvoiceDetailPage() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     // On mobile, use native Web Share API to send the PDF file + text together
-    if (isMobile && navigator.share && navigator.canShare) {
+    if (isMobile && navigator.share) {
       setSharing(true);
       let activeBlob = pdfBlob;
       if (!activeBlob) {
@@ -365,7 +365,9 @@ export default function InvoiceDetailPage() {
 
       if (activeBlob) {
         const file = new File([activeBlob], filename, { type: "application/pdf" });
-        if (navigator.canShare({ files: [file] })) {
+        const canShareFiles = !navigator.canShare || navigator.canShare({ files: [file] });
+        
+        if (canShareFiles) {
           try {
             await navigator.share({
               files: [file],

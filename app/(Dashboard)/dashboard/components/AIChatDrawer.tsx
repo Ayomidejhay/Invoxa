@@ -267,7 +267,7 @@ Try asking me questions like:
         title="Open AI Analyst"
       >
         <span className="relative flex h-6 w-6">
-          <FiCpu className="w-6 h-6 animate-pulse group-hover:rotate-12 transition-transform duration-300" />
+          <FiMessageSquare className="w-6 h-6 animate-pulse group-hover:rotate-12 transition-transform duration-300" />
           {/* <span className="absolute -top-1 -right-1 flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
@@ -293,7 +293,7 @@ Try asking me questions like:
         <div className="p-4 border-b border-slate-250/60 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-900/30">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#355834]/10 dark:bg-[#355834]/20 flex items-center justify-center text-[#355834] dark:text-green-450">
-              <FiCpu className="w-5 h-5" />
+              <FiMessageSquare className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-dark dark:text-white">Invoxa AI Analyst</h3>
