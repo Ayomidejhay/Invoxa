@@ -1,6 +1,7 @@
 import type { InvoiceStatus, InvoiceType } from "@/lib/supabase/database.types";
 
 const STATUS_STYLES: Record<InvoiceStatus, string> = {
+  proposal: "bg-purple-100 text-purple-700",
   draft: "bg-gray-100 text-gray-600",
   sent: "bg-blue-100 text-blue-700",
   partial: "bg-indigo-100 text-indigo-700",
@@ -15,6 +16,7 @@ const STATUS_STYLES: Record<InvoiceStatus, string> = {
 const TYPE_STYLES: Record<InvoiceType, string> = {
   sale: "bg-primary-soft text-deepgreen",
   rental: "bg-rental-soft text-rental",
+  service: "bg-sky-100 text-sky-700",
 };
 
 export function StatusBadge({ status, className = "" }: { status: InvoiceStatus; className?: string }) {
@@ -40,7 +42,7 @@ export function TypeBadge({ type, className = "" }: { type: InvoiceType; classNa
         className,
       ].join(" ")}
     >
-      {type === "sale" ? "Sale" : "Rental"}
+      {type === "sale" ? "Sale" : type === "rental" ? "Rental" : "Service"}
     </span>
   );
 }

@@ -13,8 +13,8 @@
 // `.insert()`/`.update()` argument types everywhere, not just here.
 
 export type ProfileRole = "owner" | "admin" | "staff";
-export type InvoiceType = "sale" | "rental";
-export type InvoiceStatus = "draft" | "sent" | "partial" | "paid" | "overdue" | "void";
+export type InvoiceType = "sale" | "rental" | "service";
+export type InvoiceStatus = "proposal" | "draft" | "sent" | "partial" | "paid" | "overdue" | "void";
 export type TeamInviteStatus = "pending" | "accepted" | "revoked" | "expired";
 
 export interface Database {
@@ -206,6 +206,8 @@ export interface Database {
           created_by: string | null;
           paid_at: string | null;
           voided_at: string | null;
+          pricing_options: Record<string, any> | null;
+          selected_pricing_option: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -348,15 +350,40 @@ export interface Database {
         Args: {
           p_customer_id: string;
           p_type: InvoiceType;
-          p_items: { product_id: string; quantity: number; start_date?: string; end_date?: string }[];
+          p_items: { product_id: string | null; name?: string | null; quantity: number; unit_price?: number | null; start_date?: string; end_date?: string }[];
           p_start_date?: string | null;
           p_end_date?: string | null;
           p_due_date?: string | null;
           p_notes?: string | null;
           p_currency?: string | null;
           p_conversion_factor?: number | null;
+          p_pricing_options?: Record<string, any> | null;
         };
         Returns: Database["public"]["Tables"]["invoices"]["Row"];
+      };
+      select_invoice_pricing_option: {
+        Args: {
+          p_invoice_id: string;
+          p_option: string;
+        };
+        Returns: Database["public"]["Tables"]["invoices"]["Row"];
+      };
+      get_public_proposal: {
+        Args: {
+          p_invoice_id: string;
+        };
+        Returns: {
+          id: string;
+          invoice_number: string;
+          currency: string;
+          notes: string | null;
+          pricing_options: Record<string, any> | null;
+          selected_pricing_option: string | null;
+          status: string;
+          customer_name: string;
+          org_name: string;
+          org_logo_url: string | null;
+        }[];
       };
       mark_invoice_paid: {
         Args: { p_invoice_id: string };

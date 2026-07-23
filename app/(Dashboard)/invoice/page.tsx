@@ -224,6 +224,7 @@ type Invoice = {
   currency: string
   created_at: string
   customers?: { name: string }
+  selected_pricing_option?: string | null
 }
 
 export default function InvoicePage() {

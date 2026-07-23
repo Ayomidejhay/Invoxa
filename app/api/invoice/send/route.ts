@@ -41,14 +41,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
+    const isProposal = invoice.status === "proposal";
+
     // 2. Obtain the PDF buffer (use client-supplied base64 PDF, or generate server-side if not provided)
-    let pdfBuffer: Buffer;
-    if (pdfBase64) {
-      pdfBuffer = Buffer.from(pdfBase64, "base64");
-    } else {
-      const cookieHeader = req.headers.get("cookie") || "";
-      const origin = new URL(req.url).origin;
-      pdfBuffer = await generatePDFBuffer(invoiceId, supabase, cookieHeader, origin);
+    let pdfBuffer: Buffer | null = null;
+    if (!isProposal) {
+      if (pdfBase64) {
+        pdfBuffer = Buffer.from(pdfBase64, "base64");
+      } else {
+        const cookieHeader = req.headers.get("cookie") || "";
+        const origin = new URL(req.url).origin;
+        pdfBuffer = await generatePDFBuffer(invoiceId, supabase, cookieHeader, origin);
+      }
     }
 
     // 3. Configure the Nodemailer SMTP transport
@@ -64,35 +68,40 @@ export async function POST(req: Request) {
 
     // 4. Configure email parameters
     const orgName = invoice.organizations?.name || "Invoxa";
-    const mailOptions = {
+    const mailOptions: any = {
       from: `"${orgName} via Invoxa" <${smtpEmail}>`,
       replyTo: smtpEmail,
       to: clientEmail,
-      subject: emailSubject || `Invoice #${invoice.invoice_number || invoice.id.slice(0, 8)}`,
+      subject: emailSubject || (isProposal ? `Service Proposal #${invoice.invoice_number}` : `Invoice #${invoice.invoice_number || invoice.id.slice(0, 8)}`),
       text: emailBody, // Crucial plain text fallback to prevent spam flagging (multipart/alternative)
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-          <h2 style="color: #1f2937; margin-top: 0;">Invoice from ${orgName}</h2>
+          <h2 style="color: #1f2937; margin-top: 0;">${isProposal ? "Proposal" : "Invoice"} from ${orgName}</h2>
           <div style="margin-top: 20px; margin-bottom: 20px; font-size: 16px;">
             ${emailBody.replace(/\n/g, "<br />")}
           </div>
+          ${!isProposal ? `
           <p style="font-size: 14px; color: #4b5563;">
             Please find your invoice attached as a PDF file.
           </p>
+          ` : ''}
           <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
           <p style="font-size: 11px; color: #9ca3af; text-align: center; margin-bottom: 0;">
             This email was sent securely on behalf of ${orgName} via Invoxa.
           </p>
         </div>
       `,
-      attachments: [
+    };
+
+    if (pdfBuffer) {
+      mailOptions.attachments = [
         {
           filename: `invoice-${invoice.invoice_number || invoice.id.slice(0, 8)}.pdf`,
           content: pdfBuffer,
           contentType: "application/pdf",
         },
-      ],
-    };
+      ];
+    }
 
     // 5. Send the mail
     await transporter.sendMail(mailOptions);

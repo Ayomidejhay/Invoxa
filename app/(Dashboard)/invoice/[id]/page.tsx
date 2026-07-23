@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { FiArrowLeft } from "react-icons/fi";
+import { FiArrowLeft, FiClock, FiCalendar, FiBriefcase, FiCheckCircle, FiInfo, FiLayers, FiFileText, FiCheck } from "react-icons/fi";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useOrganization } from "../../components/OrganizationProvider";
 import type { InvoiceStatus, InvoiceType, BankAccount } from "@/lib/supabase/database.types";
@@ -36,6 +36,12 @@ type Invoice = {
   customers?: Customer;
   start_date?: string | null;
   end_date?: string | null;
+  pricing_options?: {
+    hourly?: { rate: number; quantity: number; label: string };
+    daily?: { rate: number; quantity: number; label: string };
+    flat?: { rate: number; quantity: number; label: string };
+  } | null;
+  selected_pricing_option?: string | null;
 };
 
 type InvoiceItem = {
@@ -62,19 +68,25 @@ const daysBetween = (start?: string | null, end?: string | null) => {
 // reliably parse it and washes the colors out. These two are plain-hex
 // stand-ins used *only* inside the html2canvas-captured #invoice container.
 function PrintTypeBadge({ type }: { type: InvoiceType }) {
-  const isSale = type === "sale";
+  const styles: Record<InvoiceType, { background: string; color: string; label: string }> = {
+    sale: { background: "#EAF2EB", color: "#355834", label: "Sale" },
+    rental: { background: "#FBF1DE", color: "#B7791F", label: "Rental" },
+    service: { background: "#E0F2FE", color: "#0369A1", label: "Service" },
+  };
+  const config = styles[type] || styles.sale;
   return (
     <span
       className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
-      style={isSale ? { background: "#EAF2EB", color: "#355834" } : { background: "#FBF1DE", color: "#B7791F" }}
+      style={{ background: config.background, color: config.color }}
     >
-      {isSale ? "Sale" : "Rental"}
+      {config.label}
     </span>
   );
 }
 
 function PrintStatusBadge({ status }: { status: InvoiceStatus }) {
   const styles: Record<InvoiceStatus, { background: string; color: string }> = {
+    proposal: { background: "#EAF2EB", color: "#355834" },
     draft: { background: "#F1F5F9", color: "#475569" },
     sent: { background: "#DBEAFE", color: "#1D4ED8" },
     partial: { background: "#E0E7FF", color: "#4338CA" },
@@ -92,7 +104,70 @@ function PrintStatusBadge({ status }: { status: InvoiceStatus }) {
   );
 }
 
+const renderFormattedNotes = (text: string) => {
+  const lines = text.split('\n');
+  return (
+    <div className="space-y-4">
+      {lines.map((line, idx) => {
+        const cleanLine = line.trim();
+        if (!cleanLine) return null;
 
+        // 1. Check if it's a section header (e.g. ends with ":")
+        if (cleanLine.endsWith(':')) {
+          return (
+            <div key={idx} className="pt-4 first:pt-0">
+              <h4 className="font-extrabold text-xs uppercase tracking-wider text-deepgreen dark:text-lightgreen flex items-center gap-2 mb-2 text-left">
+                <span className="w-1.5 h-1.5 rounded-full bg-deepgreen dark:bg-lightgreen animate-pulse" />
+                {cleanLine.slice(0, -1)}
+              </h4>
+              <div className="h-[1px] bg-gradient-to-r from-deepgreen/20 dark:from-lightgreen/20 to-transparent" />
+            </div>
+          );
+        }
+
+        // 2. Check if it's a bullet point
+        if (cleanLine.startsWith('- ') || cleanLine.startsWith('* ') || cleanLine.startsWith('• ') || cleanLine.startsWith('•')) {
+          const markerLength = cleanLine.startsWith('•') && !cleanLine.startsWith('• ') ? 1 : 2;
+          const content = cleanLine.substring(markerLength).trim();
+          return (
+            <div key={idx} className="flex items-start gap-3.5 p-4 rounded-2xl bg-white/40 dark:bg-white/[0.01] border border-slate-100/80 dark:border-zinc-800/40 shadow-sm hover:shadow-md hover:border-deepgreen/20 dark:hover:border-lightgreen/20 transition-all duration-300 text-left">
+              <div className="w-5 h-5 rounded-lg bg-deepgreen/10 dark:bg-lightgreen/10 text-deepgreen dark:text-lightgreen flex items-center justify-center shrink-0 mt-0.5 shadow-inner">
+                <FiCheck className="w-3 h-3" />
+              </div>
+              <span className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed font-medium">
+                {content}
+              </span>
+            </div>
+          );
+        }
+
+        // 3. Check if it's a numbered list
+        const numberMatch = cleanLine.match(/^\d+\.\s(.*)/) || cleanLine.match(/^\d+\.(.*)/);
+        if (numberMatch) {
+          const number = cleanLine.split('.')[0];
+          const content = numberMatch[1].trim();
+          return (
+            <div key={idx} className="flex items-start gap-3.5 p-4 rounded-2xl bg-white/40 dark:bg-white/[0.01] border border-slate-100/80 dark:border-zinc-800/40 shadow-sm hover:shadow-md hover:border-deepgreen/20 dark:hover:border-lightgreen/20 transition-all duration-300 text-left">
+              <div className="w-5 h-5 rounded-lg bg-deepgreen/10 dark:bg-lightgreen/10 text-deepgreen dark:text-lightgreen flex items-center justify-center shrink-0 font-bold text-xs mt-0.5 shadow-inner">
+                {number}
+              </div>
+              <span className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed font-medium">
+                {content}
+              </span>
+            </div>
+          );
+        }
+
+        // 4. Default standard paragraph
+        return (
+          <p key={idx} className="text-sm leading-relaxed text-zinc-650 dark:text-zinc-350 font-medium pl-1.5 text-left bg-slate-50/50 dark:bg-zinc-850/20 p-4 rounded-2xl border border-slate-100/50 dark:border-zinc-800/30">
+            {cleanLine}
+          </p>
+        );
+      })}
+    </div>
+  );
+};
 
 export default function InvoiceDetailPage() {
   const { id } = useParams() as { id: string };
@@ -169,8 +244,29 @@ export default function InvoiceDetailPage() {
         }
       : null;
 
+    let finalItems: InvoiceItem[] = itemData || [];
+    if (inv && (!itemData || itemData.length === 0) && inv.selected_pricing_option) {
+      const option = inv.selected_pricing_option;
+      const pricingOptions = inv.pricing_options as any;
+      const chosenPlan = pricingOptions?.[option];
+      if (chosenPlan) {
+        finalItems = [
+          {
+            id: `virtual-${option}`,
+            product_id: null,
+            name: `${chosenPlan.label || `${option.toUpperCase()} Billing Option`} (Accepted Proposal Plan)`,
+            quantity: chosenPlan.quantity || 1,
+            unit_price: chosenPlan.rate || 0,
+            total_price: (chosenPlan.quantity || 1) * (chosenPlan.rate || 0),
+            start_date: inv.start_date || null,
+            end_date: inv.end_date || null,
+          },
+        ];
+      }
+    }
+
     setInvoice(normalizedInv);
-    setItems(itemData || []);
+    setItems(finalItems);
     setPayments(paymentData || []);
   };
 
@@ -193,7 +289,7 @@ export default function InvoiceDetailPage() {
 
   // Pre-generate and cache the PDF in memory on the client side from the server
   useEffect(() => {
-    if (loading || !invoice || !id) return;
+    if (loading || !invoice || !id || invoice.status === "proposal") return;
 
     let isMounted = true;
 
@@ -229,17 +325,25 @@ export default function InvoiceDetailPage() {
   }
 
   const isRental = invoice.type === "rental";
+  const isService = invoice.type === "service";
   const currency = invoice.currency || org.currency || "NGN";
-  const balanceDue = invoice.total - invoice.amount_paid;
-  const primaryColor = org?.primary_color || (isRental ? "#B7791F" : "#355834");
+  const effectiveTotal = invoice.total > 0 ? invoice.total : grandTotal;
+  const balanceDue = effectiveTotal - invoice.amount_paid;
+  const primaryColor = org?.primary_color || (isService ? "#0284C7" : isRental ? "#B7791F" : "#355834");
+
+  const copyProposalLink = () => {
+    const link = `${window.location.origin}/proposal/${id}`;
+    navigator.clipboard.writeText(link);
+    toast.success("Proposal link copied to clipboard!");
+  };
 
   const openPaymentModal = () => {
-    const remaining = invoice.total - invoice.amount_paid;
+    const remaining = effectiveTotal - invoice.amount_paid;
     // First payment on this invoice: suggest the org's default deposit %
     // if one is set, otherwise suggest the full remaining balance.
     const suggested =
       invoice.amount_paid === 0 && org.default_deposit_percentage
-        ? Math.round(invoice.total * (org.default_deposit_percentage / 100) * 100) / 100
+        ? Math.round(effectiveTotal * (org.default_deposit_percentage / 100) * 100) / 100
         : remaining;
     setPaymentAmount(suggested.toString());
     setPaymentNote("");
@@ -340,6 +444,15 @@ export default function InvoiceDetailPage() {
   const shareInvoice = async () => {
     if (!invoice) return;
 
+    if (invoice.status === "proposal") {
+      const proposalLink = `${window.location.origin}/proposal/${id}`;
+      const shareText = `Dear ${invoice.customers?.name || "Customer"},\n\nPlease review our service proposal and select your preferred payment plan:\n${proposalLink}\n\nThank you,\nThe ${org.name} Team`;
+      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+      window.open(waUrl, "_blank");
+      toast.success("Opening WhatsApp with proposal link!");
+      return;
+    }
+
     const shareText = `Dear ${invoice.customers?.name || "Customer"},\n\nPlease find attached invoice #${invoice.invoice_number || invoice.id.slice(0, 8)} for your recent transaction.\n\nTotal Amount: ${formatCurrency(invoice.total, currency)}\nRemaining Balance: ${formatCurrency(balanceDue, currency)}\n\nThank you,\nThe ${org.name} Team`;
     const safeInvoiceNumber = (invoice.invoice_number || invoice.id.slice(0, 8))
       .replace(/[^a-zA-Z0-9-_\s.]/g, "_");
@@ -429,10 +542,19 @@ export default function InvoiceDetailPage() {
   const openEmailModal = () => {
     if (!invoice) return;
     setClientEmail(invoice.customers?.email || "");
-    setEmailSubject(`Invoice #${invoice.invoice_number || invoice.id.slice(0, 8)} from ${org.name}`);
-    setEmailBody(
-      `Dear ${invoice.customers?.name || "Customer"},\n\nPlease find attached invoice #${invoice.invoice_number || invoice.id.slice(0, 8)} for your recent transaction.\n\nTotal Amount: ${formatCurrency(invoice.total, currency)}\nRemaining Balance: ${formatCurrency(balanceDue, currency)}\n\nThank you,\nThe ${org.name} Team`
-    );
+    
+    if (invoice.status === "proposal") {
+      const proposalLink = `${window.location.origin}/proposal/${id}`;
+      setEmailSubject(`Service Proposal #${invoice.invoice_number || invoice.id.slice(0, 8)} from ${org.name}`);
+      setEmailBody(
+        `Dear ${invoice.customers?.name || "Customer"},\n\nPlease review our service proposal and select your preferred payment plan here:\n\n${proposalLink}\n\nThank you,\nThe ${org.name} Team`
+      );
+    } else {
+      setEmailSubject(`Invoice #${invoice.invoice_number || invoice.id.slice(0, 8)} from ${org.name}`);
+      setEmailBody(
+        `Dear ${invoice.customers?.name || "Customer"},\n\nPlease find attached invoice #${invoice.invoice_number || invoice.id.slice(0, 8)} for your recent transaction.\n\nTotal Amount: ${formatCurrency(invoice.total, currency)}\nRemaining Balance: ${formatCurrency(balanceDue, currency)}\n\nThank you,\nThe ${org.name} Team`
+      );
+    }
     setEmailModalOpen(true);
   };
 
@@ -474,6 +596,25 @@ export default function InvoiceDetailPage() {
 
   return (
     <div className="max-w-4xl w-full mx-auto px-4 md:px-0 pb-12 space-y-6">
+      {/* Top Banner for Selected Proposal Option */}
+      {invoice.selected_pricing_option && (
+        <div className="p-4 rounded-2xl border border-[#355834]/30 dark:border-green-800/20 bg-[#355834]/5 dark:bg-[#1C2C22]/30 text-sm text-[#355834] dark:text-[#8BB174] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm print:hidden">
+          <div className="flex gap-3 items-center">
+            <div className="w-8 h-8 rounded-lg bg-[#355834]/10 dark:bg-green-500/10 flex items-center justify-center shrink-0">
+              <FiCheckCircle className="w-4 h-4 text-[#355834] dark:text-green-400 animate-pulse" />
+            </div>
+            <div>
+              <span className="font-bold text-dark dark:text-white">Proposal billing active!</span>{" "}
+              Locked in option: <span className="font-extrabold uppercase text-[#355834] dark:text-[#8BB174]">{invoice.selected_pricing_option}</span> plan. 
+              {effectiveTotal > 0 && ` Contract value: ${formatCurrency(effectiveTotal, currency)}`}
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#355834]/15 dark:bg-[#355834]/35 text-[#355834] dark:text-green-300 border border-[#355834]/20 uppercase tracking-widest">
+            Option Active
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center gap-2.5 print:hidden mb-2">
         <button
           onClick={() => router.back()}
@@ -516,8 +657,8 @@ export default function InvoiceDetailPage() {
           style={{ background: primaryColor }}
         />
 
-        {/* PAID / VOID stamp — a real invoice convention, and useful even printed in black & white */}
-        {(invoice.status === "paid" || invoice.status === "void") && (
+        {/* PAID / VOID / PROPOSAL stamp — a real invoice convention, and useful even printed in black & white */}
+        {(invoice.status === "paid" || invoice.status === "void" || invoice.status === "proposal") && (
           <div
             className="absolute top-24 right-12 pointer-events-none select-none"
             style={{ transform: "rotate(-12deg)" }}
@@ -527,7 +668,9 @@ export default function InvoiceDetailPage() {
               style={
                 invoice.status === "paid"
                   ? { color: "#16A34A", borderColor: "#16A34A", opacity: 0.35 }
-                  : { color: "#DC2626", borderColor: "#DC2626", opacity: 0.35 }
+                  : invoice.status === "void"
+                  ? { color: "#DC2626", borderColor: "#DC2626", opacity: 0.35 }
+                  : { color: "#355834", borderColor: "#355834", opacity: 0.15 }
               }
             >
               {invoice.status}
@@ -569,7 +712,9 @@ export default function InvoiceDetailPage() {
               <PrintTypeBadge type={invoice.type} />
               <PrintStatusBadge status={invoice.status} />
             </div>
-            <h2 className="text-3xl font-light tracking-tight" style={{ color: primaryColor }}>INVOICE</h2>
+            <h2 className="text-3xl font-light tracking-tight tracking-wide uppercase" style={{ color: primaryColor }}>
+              {invoice.status === "proposal" ? "PROPOSAL" : "INVOICE"}
+            </h2>
             <p className="text-sm font-mono mt-0.5" style={{ color: "#64748b" }}>
               #{invoice.invoice_number || invoice.id.slice(0, 8)}
             </p>
@@ -615,9 +760,9 @@ export default function InvoiceDetailPage() {
                 </span>
               </p>
             )}
-            {isRental && invoice.start_date && (
+            {(isRental || isService) && invoice.start_date && (
               <p>
-                <span style={{ color: "#94a3b8" }}>Rental Start:</span>{" "}
+                <span style={{ color: "#94a3b8" }}>{isRental ? "Rental Start:" : "Service Start:"}</span>{" "}
                 <span className="font-medium" style={{ color: "#1e293b" }}>
                   {new Date(invoice.start_date).toLocaleDateString("en-US", {
                     year: "numeric",
@@ -627,9 +772,9 @@ export default function InvoiceDetailPage() {
                 </span>
               </p>
             )}
-            {isRental && invoice.end_date && (
+            {(isRental || isService) && invoice.end_date && (
               <p>
-                <span style={{ color: "#94a3b8" }}>Rental End:</span>{" "}
+                <span style={{ color: "#94a3b8" }}>{isRental ? "Rental End:" : "Service End:"}</span>{" "}
                 <span className="font-medium" style={{ color: "#1e293b" }}>
                   {new Date(invoice.end_date).toLocaleDateString("en-US", {
                     year: "numeric",
@@ -642,82 +787,293 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
 
-        {/* Table of Items */}
-        <div className="pt-6">
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
-                <th className="p-3 text-left font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Description</th>
-                {isRental && <th className="p-3 text-center font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Days</th>}
-                <th className="p-3 text-center font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Qty</th>
-                <th className="p-3 text-right font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>
-                  {isRental ? "Rate / day" : "Unit Price"}
-                </th>
-                <th className="p-3 text-right font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((it, idx) => {
-                const days = daysBetween(
-                  it.start_date || invoice.start_date || undefined,
-                  it.end_date || invoice.end_date || undefined,
-                );
-                return (
-                  <tr key={it.id} style={{ borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
-                    <td className="p-3 font-medium" style={{ color: "#0f172a" }}>
-                      {it.name || "Product"}
-                      {isRental && (
-                        <p className="text-xs font-normal mt-0.5" style={{ color: "#94a3b8" }}>
-                          {formatCurrency(it.unit_price, currency, { forCanvas: true })}/day × {it.quantity} × {days || 1} days
-                        </p>
-                      )}
-                    </td>
-                    {isRental && <td className="p-3 text-center font-mono" style={{ color: "#64748b" }}>{days || "-"}</td>}
-                    <td className="p-3 text-center font-mono" style={{ color: "#64748b" }}>{it.quantity}</td>
-                    <td className="p-3 text-right font-mono" style={{ color: "#64748b" }}>{formatCurrency(it.unit_price, currency, { forCanvas: true })}</td>
-                    <td className="p-3 text-right font-semibold font-mono" style={{ color: "#020617" }}>{formatCurrency(it.total_price, currency, { forCanvas: true })}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        {/* Table of Items / Proposal Pricing Options */}
+        {invoice.status === "proposal" ? (
+          <div className="pt-6 space-y-6">
+            {invoice.notes && (
+              <div 
+                className="bg-slate-50/50 dark:bg-zinc-900/25 backdrop-blur-sm border border-slate-200/60 dark:border-zinc-800/80 p-8 rounded-3xl shadow-sm space-y-6 relative overflow-hidden text-left"
+              >
+                <div className="absolute left-0 top-6 bottom-6 w-[4px] rounded-r bg-gradient-to-b from-deepgreen to-lightgreen" />
+                
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-850 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-[#355834]/10 dark:bg-emerald-500/10 text-[#355834] dark:text-emerald-400 flex items-center justify-center">
+                      <FiLayers className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                        Project Scope & Deliverables
+                      </h4>
+                      <p className="text-[10px] text-zinc-400 dark:text-zinc-600 mt-0.5">Specifications and alignment criteria</p>
+                    </div>
+                  </div>
+                  <span className="text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/10">
+                    Official Scope
+                  </span>
+                </div>
+
+                <div className="pl-1">
+                  {renderFormattedNotes(invoice.notes)}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Proposed Pricing Options</h3>
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#355834]/10 text-[#355834] border border-[#355834]/10">
+                Awaiting Client Selection
+              </span>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {invoice.pricing_options?.hourly && (
+                <div className="relative overflow-hidden group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-[#355834]/40">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#355834]/5 to-transparent rounded-bl-full pointer-events-none" />
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-[#355834]/10 text-[#355834] flex items-center justify-center shrink-0">
+                      <FiClock className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="inline-block px-2.5 py-0.5 rounded bg-slate-100 text-zinc-600 text-[10px] font-bold uppercase tracking-wider">
+                        Hourly Rate
+                      </span>
+                      <h4 className="font-bold text-sm text-zinc-800">Hourly Plan</h4>
+                      <p className="text-xs text-zinc-500 line-clamp-2 mt-0.5">{invoice.pricing_options.hourly.label || "Billing by the hour"}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 space-y-4">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-zinc-800 font-mono">
+                        {formatCurrency(invoice.pricing_options.hourly.rate, currency)}
+                      </span>
+                      <span className="text-xs text-zinc-500 font-medium">/ hr</span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs text-zinc-600 border-t border-slate-100 pt-4">
+                      <span>Est. Quantity</span>
+                      <strong className="font-semibold text-zinc-700">{invoice.pricing_options.hourly.quantity} hrs</strong>
+                    </div>
+
+                    <div className="border-t border-dashed border-slate-200 pt-3 flex justify-between items-center font-bold text-sm text-zinc-800">
+                      <span className="text-xs text-zinc-500">Proposed Total</span>
+                      <span className="font-mono text-[#355834]">
+                        {formatCurrency(invoice.pricing_options.hourly.rate * invoice.pricing_options.hourly.quantity, currency)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {invoice.pricing_options?.daily && (
+                <div className="relative overflow-hidden group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-[#355834]/40">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#355834]/5 to-transparent rounded-bl-full pointer-events-none" />
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-[#355834]/10 text-[#355834] flex items-center justify-center shrink-0">
+                      <FiCalendar className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="inline-block px-2.5 py-0.5 rounded bg-slate-100 text-zinc-600 text-[10px] font-bold uppercase tracking-wider">
+                        Daily Rate
+                      </span>
+                      <h4 className="font-bold text-sm text-zinc-800">Daily Plan</h4>
+                      <p className="text-xs text-zinc-500 line-clamp-2 mt-0.5">{invoice.pricing_options.daily.label || "Billing by the day"}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 space-y-4">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-zinc-800 font-mono">
+                        {formatCurrency(invoice.pricing_options.daily.rate, currency)}
+                      </span>
+                      <span className="text-xs text-zinc-500 font-medium">/ day</span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs text-zinc-600 border-t border-slate-100 pt-4">
+                      <span>Est. Quantity</span>
+                      <strong className="font-semibold text-zinc-700">{invoice.pricing_options.daily.quantity} days</strong>
+                    </div>
+
+                    <div className="border-t border-dashed border-slate-200 pt-3 flex justify-between items-center font-bold text-sm text-zinc-800">
+                      <span className="text-xs text-zinc-500">Proposed Total</span>
+                      <span className="font-mono text-[#355834]">
+                        {formatCurrency(invoice.pricing_options.daily.rate * invoice.pricing_options.daily.quantity, currency)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {invoice.pricing_options?.flat && (
+                <div className="relative overflow-hidden group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-[#355834]/40">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#355834]/5 to-transparent rounded-bl-full pointer-events-none" />
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-[#355834]/10 text-[#355834] flex items-center justify-center shrink-0">
+                      <FiBriefcase className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="inline-block px-2.5 py-0.5 rounded bg-slate-100 text-zinc-600 text-[10px] font-bold uppercase tracking-wider">
+                        Fixed Price
+                      </span>
+                      <h4 className="font-bold text-sm text-zinc-800">Fixed Project Plan</h4>
+                      <p className="text-xs text-zinc-500 line-clamp-2 mt-0.5">{invoice.pricing_options.flat.label || "One-time project fee"}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 space-y-4">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-zinc-800 font-mono">
+                        {formatCurrency(invoice.pricing_options.flat.rate, currency)}
+                      </span>
+                      <span className="text-xs text-zinc-500 font-medium"> flat fee</span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs text-zinc-600 border-t border-slate-100 pt-4">
+                      <span>Est. Quantity</span>
+                      <strong className="font-semibold text-zinc-700">{invoice.pricing_options.flat.quantity} project</strong>
+                    </div>
+
+                    <div className="border-t border-dashed border-slate-200 pt-3 flex justify-between items-center font-bold text-sm text-zinc-800">
+                      <span className="text-xs text-zinc-500">Proposed Total</span>
+                      <span className="font-mono text-[#355834]">
+                        {formatCurrency(invoice.pricing_options.flat.rate * invoice.pricing_options.flat.quantity, currency)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex flex-col md:flex-row items-center gap-4 p-5 rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-950/10 text-xs text-blue-800 dark:text-blue-300 leading-relaxed justify-between">
+              <div className="flex gap-3 items-start">
+                <FiInfo className="w-5 h-5 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
+                <div>
+                  This invoice is currently in <strong className="font-semibold text-blue-900 dark:text-blue-200">Proposal</strong> status.
+                  <p className="mt-1 text-zinc-500 dark:text-zinc-400">Share the public proposal link with the client, or select an option below to confirm and activate this invoice manually.</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 border-t md:border-t-0 border-blue-100 dark:border-blue-900/30 pt-3 md:pt-0">
+                <select 
+                  id="manual_option_select"
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#0E0F12] text-xs font-semibold text-zinc-700 dark:text-zinc-300 focus:outline-none cursor-pointer"
+                  defaultValue=""
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    if (!val) return;
+                    
+                    const confirmManual = window.confirm(`Confirm selecting the ${val.toUpperCase()} pricing option on behalf of the client? This will lock in this option and transition the invoice status.`);
+                    if (!confirmManual) {
+                      e.target.value = "";
+                      return;
+                    }
+                    
+                    try {
+                      setLoading(true);
+                      const { error: rpcErr } = await supabase.rpc("select_invoice_pricing_option", {
+                        p_invoice_id: invoice.id,
+                        p_option: val,
+                      });
+                      if (rpcErr) throw new Error(rpcErr.message);
+                      await loadInvoice();
+                      toast.success(`Success! Locked in the ${val} option.`);
+                    } catch (err: any) {
+                      console.error(err);
+                      toast.error(err.message || "Failed to select option.");
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  <option value="">Select Option for Client...</option>
+                  {invoice.pricing_options?.hourly && <option value="hourly">Hourly Plan</option>}
+                  {invoice.pricing_options?.daily && <option value="daily">Daily Plan</option>}
+                  {invoice.pricing_options?.flat && <option value="flat">Fixed Project Plan</option>}
+                </select>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Table of Items */
+          <div className="pt-6">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+                  <th className="p-3 text-left font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Description</th>
+                  {isRental && <th className="p-3 text-center font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Days</th>}
+                  <th className="p-3 text-center font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Qty</th>
+                  <th className="p-3 text-right font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>
+                    {isRental ? "Rate / day" : "Unit Price"}
+                  </th>
+                  <th className="p-3 text-right font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((it, idx) => {
+                  const days = daysBetween(
+                    it.start_date || invoice.start_date || undefined,
+                    it.end_date || invoice.end_date || undefined,
+                  );
+                  return (
+                    <tr key={it.id} style={{ borderTop: idx === 0 ? "none" : "1px solid #f1f5f9" }}>
+                      <td className="p-3 font-medium" style={{ color: "#0f172a" }}>
+                        {it.name || "Product"}
+                        {isRental && (
+                          <p className="text-xs font-normal mt-0.5" style={{ color: "#94a3b8" }}>
+                            {formatCurrency(it.unit_price, currency, { forCanvas: true })}/day × {it.quantity} × {days || 1} days
+                          </p>
+                        )}
+                      </td>
+                      {isRental && <td className="p-3 text-center font-mono" style={{ color: "#64748b" }}>{days || "-"}</td>}
+                      <td className="p-3 text-center font-mono" style={{ color: "#64748b" }}>{it.quantity}</td>
+                      <td className="p-3 text-right font-mono" style={{ color: "#64748b" }}>{formatCurrency(it.unit_price, currency, { forCanvas: true })}</td>
+                      <td className="p-3 text-right font-semibold font-mono" style={{ color: "#020617" }}>{formatCurrency(it.total_price, currency, { forCanvas: true })}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Summary Block */}
-        <div className="flex justify-end pt-6" style={{ borderTop: "1px solid #f1f5f9" }}>
-          <div className="w-full max-w-xs space-y-2.5 text-sm">
-            <div className="flex justify-between" style={{ color: "#64748b" }}>
-              <span>Subtotal</span>
-              <span className="font-mono" style={{ color: "#334155" }}>{formatCurrency(grandTotal, currency, { forCanvas: true })}</span>
+        {invoice.status !== "proposal" && (
+          <div className="flex justify-end pt-6" style={{ borderTop: "1px solid #f1f5f9" }}>
+            <div className="w-full max-w-xs space-y-2.5 text-sm">
+              <div className="flex justify-between" style={{ color: "#64748b" }}>
+                <span>Subtotal</span>
+                <span className="font-mono" style={{ color: "#334155" }}>{formatCurrency(grandTotal, currency, { forCanvas: true })}</span>
+              </div>
+              <div
+                className="flex justify-between font-bold text-base pt-2.5"
+                style={{ color: primaryColor, borderTop: `1px solid ${primaryColor}` }}
+              >
+                <span>Total</span>
+                <span className="font-mono" style={{ color: primaryColor }}>{formatCurrency(effectiveTotal, currency, { forCanvas: true })}</span>
+              </div>
+              {invoice.amount_paid > 0 && (
+                <>
+                  <div className="flex justify-between" style={{ color: "#16A34A" }}>
+                    <span>Amount Paid</span>
+                    <span className="font-mono">{formatCurrency(invoice.amount_paid, currency, { forCanvas: true })}</span>
+                  </div>
+                  <div
+                    className="flex justify-between font-bold pt-2"
+                    style={{ color: balanceDue > 0 ? "#B45309" : "#16A34A", borderTop: "1px dashed #e2e8f0" }}
+                  >
+                    <span>Balance Due</span>
+                    <span className="font-mono">{formatCurrency(balanceDue, currency, { forCanvas: true })}</span>
+                  </div>
+                </>
+              )}
             </div>
-            <div
-              className="flex justify-between font-bold text-base pt-2.5"
-              style={{ color: primaryColor, borderTop: `1px solid ${primaryColor}` }}
-            >
-              <span>Total</span>
-              <span className="font-mono" style={{ color: primaryColor }}>{formatCurrency(invoice.total ?? grandTotal, currency, { forCanvas: true })}</span>
-            </div>
-            {invoice.amount_paid > 0 && (
-              <>
-                <div className="flex justify-between" style={{ color: "#16A34A" }}>
-                  <span>Amount Paid</span>
-                  <span className="font-mono">{formatCurrency(invoice.amount_paid, currency, { forCanvas: true })}</span>
-                </div>
-                <div
-                  className="flex justify-between font-bold pt-2"
-                  style={{ color: balanceDue > 0 ? "#B45309" : "#16A34A", borderTop: "1px dashed #e2e8f0" }}
-                >
-                  <span>Balance Due</span>
-                  <span className="font-mono">{formatCurrency(balanceDue, currency, { forCanvas: true })}</span>
-                </div>
-              </>
-            )}
           </div>
-        </div>
+        )}
 
         {/* Bank & Payment Details */}
-        {((bankAccount && (bankAccount.bank_name || bankAccount.account_name || bankAccount.account_number)) ||
-          (org?.bank_name || org?.account_name || org?.account_number)) && (
+        {invoice.status !== "proposal" &&
+          ((bankAccount && (bankAccount.bank_name || bankAccount.account_name || bankAccount.account_number)) ||
+            (org?.bank_name || org?.account_name || org?.account_number)) && (
           <div className="pt-6 space-y-2 text-xs" style={{ borderTop: "1px solid #f1f5f9" }}>
             <h4 className="font-bold uppercase tracking-wider" style={{ color: "#94a3b8" }}>Payment Details</h4>
             <div className={`grid ${bankAccount?.routing_number || bankAccount?.swift_code ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'} gap-6 p-4 rounded-xl`} style={{ background: "#f8fafc", border: "1px solid #f1f5f9" }}>
@@ -813,7 +1169,17 @@ export default function InvoiceDetailPage() {
 
       {/* Actions (hidden on print) */}
       <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end print:hidden">
-        {invoice.status !== "paid" && invoice.status !== "void" && (
+        {invoice.status === "proposal" && (
+          <Button
+            variant="outline"
+            onClick={copyProposalLink}
+            className="col-span-2 w-full sm:w-auto font-semibold border-blue-650 text-blue-650 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+          >
+            Copy Proposal Link
+          </Button>
+        )}
+
+        {invoice.status !== "paid" && invoice.status !== "void" && invoice.status !== "proposal" && (
           <Button
             onClick={openPaymentModal}
             className="col-span-2 w-full sm:w-auto font-semibold px-4 py-2.5"
@@ -828,41 +1194,45 @@ export default function InvoiceDetailPage() {
           loading={sharing}
           className="col-span-2 w-full sm:w-auto font-medium"
         >
-          Share to WhatsApp
+          {invoice.status === "proposal" ? "Share Proposal Link" : "Share to WhatsApp"}
         </Button>
 
-        <Button
-          variant="outline"
-          onClick={downloadPDF}
-          loading={downloading}
-          className="col-span-1 w-full sm:w-auto"
-        >
-          Download PDF
-        </Button>
+        {invoice.status !== "proposal" && (
+          <Button
+            variant="outline"
+            onClick={downloadPDF}
+            loading={downloading}
+            className="col-span-1 w-full sm:w-auto"
+          >
+            Download PDF
+          </Button>
+        )}
 
         {invoice.status !== "void" && (
           <Button
             variant="outline"
             onClick={openEmailModal}
-            className="col-span-1 w-full sm:w-auto"
+            className={invoice.status === "proposal" ? "col-span-2 w-full sm:w-auto" : "col-span-1 w-full sm:w-auto"}
           >
-            Send Email
+            {invoice.status === "proposal" ? "Send Proposal Email" : "Send Email"}
           </Button>
         )}
 
-        <Button
-          variant="outline"
-          onClick={() => window.print()}
-          className={`w-full sm:w-auto ${
-            invoice.status === "void"
-              ? "col-span-1"
-              : !isOwnerOrAdmin
-              ? "col-span-2"
-              : "col-span-1"
-          }`}
-        >
-          Print
-        </Button>
+        {invoice.status !== "proposal" && (
+          <Button
+            variant="outline"
+            onClick={() => window.print()}
+            className={`w-full sm:w-auto ${
+              invoice.status === "void"
+                ? "col-span-1"
+                : !isOwnerOrAdmin
+                ? "col-span-2"
+                : "col-span-1"
+            }`}
+          >
+            Print
+          </Button>
+        )}
 
         {isOwnerOrAdmin && invoice.status !== "void" && (
           <Button

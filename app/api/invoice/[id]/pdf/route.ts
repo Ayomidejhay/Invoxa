@@ -130,12 +130,16 @@ export async function GET(
     // Retrieve invoice to verify auth membership
     const { data: invoice } = await supabase
       .from("invoices")
-      .select("organization_id")
+      .select("organization_id, status")
       .eq("id", id)
       .single();
 
     if (!invoice) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
+    if (invoice.status === "proposal") {
+      return NextResponse.json({ error: "Cannot generate PDF for a proposal status invoice" }, { status: 400 });
     }
 
     // Check user membership inside the organization
