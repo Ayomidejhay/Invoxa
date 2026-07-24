@@ -187,6 +187,9 @@ export default function InvoiceDetailPage() {
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
 
+  const [manualSelectModalOpen, setManualSelectModalOpen] = useState(false);
+  const [modalChosenOption, setModalChosenOption] = useState<"hourly" | "daily" | "flat" | null>(null);
+
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentNote, setPaymentNote] = useState("");
@@ -969,51 +972,24 @@ export default function InvoiceDetailPage() {
             </div>
             
             <div className="flex flex-col md:flex-row items-center gap-4 p-5 rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-950/10 text-xs text-blue-800 dark:text-blue-300 leading-relaxed justify-between">
-              <div className="flex gap-3 items-start">
+              <div className="flex gap-3 items-start text-left">
                 <FiInfo className="w-5 h-5 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
                 <div>
                   This invoice is currently in <strong className="font-semibold text-blue-900 dark:text-blue-200">Proposal</strong> status.
-                  <p className="mt-1 text-zinc-500 dark:text-zinc-400">Share the public proposal link with the client, or select an option below to confirm and activate this invoice manually.</p>
+                  <p className="mt-1 text-zinc-550 dark:text-zinc-400">Share the public proposal link with the client, or confirm and lock in a plan manually on their behalf.</p>
                 </div>
               </div>
               
               <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 border-t md:border-t-0 border-blue-100 dark:border-blue-900/30 pt-3 md:pt-0">
-                <select 
-                  id="manual_option_select"
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#0E0F12] text-xs font-semibold text-zinc-700 dark:text-zinc-300 focus:outline-none cursor-pointer"
-                  defaultValue=""
-                  onChange={async (e) => {
-                    const val = e.target.value;
-                    if (!val) return;
-                    
-                    const confirmManual = window.confirm(`Confirm selecting the ${val.toUpperCase()} pricing option on behalf of the client? This will lock in this option and transition the invoice status.`);
-                    if (!confirmManual) {
-                      e.target.value = "";
-                      return;
-                    }
-                    
-                    try {
-                      setLoading(true);
-                      const { error: rpcErr } = await supabase.rpc("select_invoice_pricing_option", {
-                        p_invoice_id: invoice.id,
-                        p_option: val,
-                      });
-                      if (rpcErr) throw new Error(rpcErr.message);
-                      await loadInvoice();
-                      toast.success(`Success! Locked in the ${val} option.`);
-                    } catch (err: any) {
-                      console.error(err);
-                      toast.error(err.message || "Failed to select option.");
-                    } finally {
-                      setLoading(false);
-                    }
+                <button
+                  onClick={() => {
+                    setModalChosenOption(null);
+                    setManualSelectModalOpen(true);
                   }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-650 dark:hover:bg-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-sm inline-flex items-center gap-1.5"
                 >
-                  <option value="">Select Option for Client...</option>
-                  {invoice.pricing_options?.hourly && <option value="hourly">Hourly Plan</option>}
-                  {invoice.pricing_options?.daily && <option value="daily">Daily Plan</option>}
-                  {invoice.pricing_options?.flat && <option value="flat">Fixed Project Plan</option>}
-                </select>
+                  <FiLayers className="w-3.5 h-3.5" /> Select Option for Client
+                </button>
               </div>
             </div>
           </div>
@@ -1374,6 +1350,131 @@ export default function InvoiceDetailPage() {
             </Button>
             <Button onClick={submitEmail} loading={sendingEmail} className="font-semibold px-4 py-2.5">
               Send Email
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Manual Pricing Option Selection Modal */}
+      <Modal 
+        open={manualSelectModalOpen} 
+        onClose={() => setManualSelectModalOpen(false)} 
+        title="Confirm Plan on Client's Behalf" 
+        size="sm"
+      >
+        <div className="space-y-5 text-zinc-700 dark:text-zinc-300">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Select one of the proposed pricing plans below to lock in the billing rate and transition this proposal to active status.
+          </p>
+
+          <div className="space-y-3">
+            {invoice.pricing_options?.hourly && (
+              <button
+                type="button"
+                onClick={() => setModalChosenOption("hourly")}
+                className={`w-full p-4 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  modalChosenOption === "hourly"
+                    ? "border-blue-600 bg-blue-50/20 dark:bg-blue-950/10 dark:border-blue-500/60"
+                    : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#0E0F12] hover:border-slate-350 dark:hover:border-zinc-700"
+                }`}
+              >
+                <div className="space-y-1">
+                  <span className="inline-block px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-zinc-650 dark:text-zinc-400 text-[9px] font-bold uppercase tracking-wider">
+                    Hourly Rate
+                  </span>
+                  <h4 className="font-extrabold text-sm text-zinc-800 dark:text-zinc-200">Hourly Plan</h4>
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-450 line-clamp-1">{invoice.pricing_options.hourly.label || "Billing by the hour"}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-sm font-mono font-bold text-zinc-850 dark:text-zinc-200">
+                    {formatCurrency(invoice.pricing_options.hourly.rate, currency)}
+                  </span>
+                  <span className="text-[10px] text-zinc-500 block">/ hr</span>
+                </div>
+              </button>
+            )}
+
+            {invoice.pricing_options?.daily && (
+              <button
+                type="button"
+                onClick={() => setModalChosenOption("daily")}
+                className={`w-full p-4 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  modalChosenOption === "daily"
+                    ? "border-blue-600 bg-blue-50/20 dark:bg-blue-950/10 dark:border-blue-500/60"
+                    : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#0E0F12] hover:border-slate-350 dark:hover:border-zinc-700"
+                }`}
+              >
+                <div className="space-y-1">
+                  <span className="inline-block px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-zinc-650 dark:text-zinc-400 text-[9px] font-bold uppercase tracking-wider">
+                    Daily Rate
+                  </span>
+                  <h4 className="font-extrabold text-sm text-zinc-800 dark:text-zinc-200">Daily Plan</h4>
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-450 line-clamp-1">{invoice.pricing_options.daily.label || "Billing by the day"}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-sm font-mono font-bold text-zinc-850 dark:text-zinc-200">
+                    {formatCurrency(invoice.pricing_options.daily.rate, currency)}
+                  </span>
+                  <span className="text-[10px] text-zinc-500 block">/ day</span>
+                </div>
+              </button>
+            )}
+
+            {invoice.pricing_options?.flat && (
+              <button
+                type="button"
+                onClick={() => setModalChosenOption("flat")}
+                className={`w-full p-4 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  modalChosenOption === "flat"
+                    ? "border-blue-600 bg-blue-50/20 dark:bg-blue-950/10 dark:border-blue-500/60"
+                    : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#0E0F12] hover:border-slate-350 dark:hover:border-zinc-700"
+                }`}
+              >
+                <div className="space-y-1">
+                  <span className="inline-block px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-zinc-655 dark:text-zinc-400 text-[9px] font-bold uppercase tracking-wider">
+                    Fixed Fee
+                  </span>
+                  <h4 className="font-extrabold text-sm text-zinc-800 dark:text-zinc-200">Fixed Plan</h4>
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-455 line-clamp-1">{invoice.pricing_options.flat.label || "Billing by flat fee"}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-sm font-mono font-bold text-zinc-850 dark:text-zinc-200">
+                    {formatCurrency(invoice.pricing_options.flat.rate, currency)}
+                  </span>
+                  <span className="text-[10px] text-zinc-500 block"> flat</span>
+                </div>
+              </button>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-zinc-850">
+            <Button variant="outline" onClick={() => setManualSelectModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!modalChosenOption}
+              onClick={async () => {
+                if (!modalChosenOption) return;
+                try {
+                  setManualSelectModalOpen(false);
+                  setLoading(true);
+                  const { error: rpcErr } = await supabase.rpc("select_invoice_pricing_option", {
+                    p_invoice_id: invoice.id,
+                    p_option: modalChosenOption,
+                  });
+                  if (rpcErr) throw new Error(rpcErr.message);
+                  await loadInvoice();
+                  toast.success(`Success! Locked in the ${modalChosenOption} option.`);
+                } catch (err: any) {
+                  console.error(err);
+                  toast.error(err.message || "Failed to select option.");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="font-bold px-4 py-2.5 bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Confirm Selection
             </Button>
           </div>
         </div>

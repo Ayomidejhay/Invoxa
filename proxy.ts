@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/database.types";
 
 const AUTH_ROUTES = ["/login", "/signup", "/forget-password", "/verify-account"];
-const PUBLIC_ROUTES = ["/", ...AUTH_ROUTES, "/accept-invite", "/auth/callback"];
+const PUBLIC_ROUTES = ["/", ...AUTH_ROUTES, "/accept-invite", "/auth/callback", "/test-select"];
 
 // Next.js 16 renamed middleware.ts -> proxy.ts (and `middleware` -> `proxy`)
 // to make explicit that this runs at the network boundary, not as an

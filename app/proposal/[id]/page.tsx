@@ -3,7 +3,7 @@
 import { useEffect, useState, use, useMemo } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/format";
-import { FiClock, FiCalendar, FiBriefcase, FiCheckCircle, FiFileText, FiCheck, FiInfo, FiLayers, FiPrinter, FiDownload } from "react-icons/fi";
+import { FiClock, FiCalendar, FiBriefcase, FiCheckCircle, FiFileText, FiCheck, FiInfo, FiLayers, FiPrinter, FiDownload, FiX } from "react-icons/fi";
 import { motion } from "framer-motion";
 
 type ProposalData = {
@@ -195,19 +195,30 @@ export default function PublicProposalPage({ params }: { params: Promise<{ id: s
     fetchProposal();
   }, [id]);
 
-  const handleSelectOption = async (option: "hourly" | "daily" | "flat") => {
-    if (!proposal || submitting) return;
+  const [pendingChoice, setPendingChoice] = useState<{
+    option: "hourly" | "daily" | "flat";
+    rate: number;
+    quantity: number;
+    label: string;
+  } | null>(null);
 
+  const handleSelectOption = (option: "hourly" | "daily" | "flat") => {
+    if (!proposal || submitting) return;
     const optData = proposal.pricing_options?.[option];
     if (!optData) return;
+    setPendingChoice({
+      option,
+      rate: optData.rate,
+      quantity: optData.quantity,
+      label: optData.label || ""
+    });
+  };
 
-    const totalStr = formatCurrency(optData.rate * optData.quantity, proposal.currency);
-    const confirmChoice = window.confirm(
-      `Confirm selection of the ${option.toUpperCase()} option for a total of ${totalStr}?`
-    );
-    if (!confirmChoice) return;
-
+  const executeOptionSelection = async () => {
+    if (!proposal || !pendingChoice || submitting) return;
+    const option = pendingChoice.option;
     setSubmitting(true);
+    setPendingChoice(null);
 
     if (proposal.id === "mock") {
       setTimeout(() => {
@@ -976,6 +987,73 @@ export default function PublicProposalPage({ params }: { params: Promise<{ id: s
             </div>
           </motion.div>
         )}
+
+      {/* Custom Confirmation Modal */}
+      {pendingChoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="w-full max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800/80 rounded-3xl p-6 shadow-2xl space-y-6 relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-deepgreen/5 to-transparent rounded-bl-full pointer-events-none" />
+            
+            <div className="flex justify-between items-start text-left">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-deepgreen/10 dark:bg-lightgreen/10 text-deepgreen dark:text-lightgreen flex items-center justify-center">
+                  <FiBriefcase className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-zinc-800 dark:text-zinc-150">
+                    Confirm Plan Selection
+                  </h3>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">Please review your billing terms</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setPendingChoice(null)} 
+                className="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors cursor-pointer"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-zinc-950 p-5 rounded-2xl border border-slate-100 dark:border-zinc-900 space-y-3.5 text-xs text-zinc-600 dark:text-zinc-400 text-left">
+              <p>
+                You are about to select the <strong className="capitalize text-zinc-850 dark:text-zinc-200">{pendingChoice.option} Plan</strong>. This will lock in the billing rate and transition the proposal to draft status.
+              </p>
+              <div className="flex justify-between items-center py-2.5 border-t border-b border-dashed border-slate-200 dark:border-zinc-850 font-bold text-zinc-800 dark:text-zinc-200">
+                <span className="text-xs text-zinc-500 font-normal">Contract Rate</span>
+                <span className="font-mono text-deepgreen dark:text-lightgreen">
+                  {formatCurrency(pendingChoice.rate, proposal.currency)} / {pendingChoice.option === "hourly" ? "hr" : pendingChoice.option === "daily" ? "day" : "fixed"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center font-bold text-zinc-850 dark:text-zinc-200">
+                <span className="text-xs text-zinc-500 font-normal">Proposed Total</span>
+                <span className="font-mono text-lg text-deepgreen dark:text-lightgreen">
+                  {formatCurrency(pendingChoice.rate * pendingChoice.quantity, proposal.currency)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPendingChoice(null)}
+                className="flex-1 py-3 bg-slate-150 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-zinc-700 dark:text-zinc-300 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeOptionSelection}
+                className="flex-1 py-3 bg-[#355834] hover:bg-[#2c472c] dark:bg-lightgreen dark:text-dark text-white rounded-2xl font-bold text-xs shadow-md transition-colors cursor-pointer"
+              >
+                Confirm Choice
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       </motion.div>
     </div>
