@@ -326,6 +326,21 @@ export default function InvoiceDetailPage() {
 
   const isRental = invoice.type === "rental";
   const isService = invoice.type === "service";
+  const parsedServiceNotes = useMemo(() => {
+    if (!invoice?.notes) return { name: "", description: "" };
+    try {
+      const parsed = JSON.parse(invoice.notes);
+      if (parsed && typeof parsed === "object" && "name" in parsed) {
+        return {
+          name: parsed.name || "",
+          description: parsed.description || "",
+        };
+      }
+    } catch (e) {
+      // Ignored
+    }
+    return { name: "", description: invoice.notes };
+  }, [invoice?.notes]);
   const currency = invoice.currency || org.currency || "NGN";
   const effectiveTotal = invoice.total > 0 ? invoice.total : grandTotal;
   const balanceDue = effectiveTotal - invoice.amount_paid;
@@ -813,8 +828,16 @@ export default function InvoiceDetailPage() {
                   </span>
                 </div>
 
+                {parsedServiceNotes.name && (
+                  <div className="px-1 mt-2">
+                    <h3 className="text-base font-extrabold text-zinc-800 dark:text-zinc-100">
+                      {parsedServiceNotes.name}
+                    </h3>
+                  </div>
+                )}
+
                 <div className="pl-1">
-                  {renderFormattedNotes(invoice.notes)}
+                  {renderFormattedNotes(parsedServiceNotes.description)}
                 </div>
               </div>
             )}
@@ -995,8 +1018,46 @@ export default function InvoiceDetailPage() {
           </div>
         ) : (
           /* Table of Items */
-          <div className="pt-6">
-            <table className="w-full text-sm">
+          <div className="space-y-6 pt-6">
+            {isService && invoice.notes && (
+              <div 
+                className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md border border-slate-200/50 dark:border-zinc-800/60 p-8 rounded-3xl shadow-sm space-y-6 relative overflow-hidden text-left"
+              >
+                <div className="absolute left-0 top-6 bottom-6 w-[4px] rounded-r bg-gradient-to-b from-deepgreen to-lightgreen" />
+                
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-850 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-deepgreen/10 dark:bg-lightgreen/10 text-deepgreen dark:text-lightgreen flex items-center justify-center">
+                      <FiLayers className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-xs uppercase tracking-wider text-zinc-700 dark:text-zinc-200">
+                        Service Description / Scope
+                      </h4>
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">Details of services rendered</p>
+                    </div>
+                  </div>
+                  <span className="text-[9px] uppercase tracking-widest font-extrabold px-2.5 py-1 rounded-full bg-deepgreen/15 dark:bg-deepgreen/35 text-deepgreen dark:text-green-300 border border-deepgreen/20 shadow-sm">
+                    Scope of Services
+                  </span>
+                </div>
+
+                {parsedServiceNotes.name && (
+                  <div className="px-1 mt-2">
+                    <h3 className="text-base font-extrabold text-zinc-800 dark:text-zinc-100">
+                      {parsedServiceNotes.name}
+                    </h3>
+                  </div>
+                )}
+
+                <div className="pl-1">
+                  {renderFormattedNotes(parsedServiceNotes.description)}
+                </div>
+              </div>
+            )}
+
+            <div className="pt-2">
+              <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
                   <th className="p-3 text-left font-bold text-xs uppercase tracking-wider" style={{ color: "#64748b" }}>Description</th>
@@ -1033,6 +1094,7 @@ export default function InvoiceDetailPage() {
                 })}
               </tbody>
             </table>
+          </div>
           </div>
         )}
 
@@ -1132,7 +1194,7 @@ export default function InvoiceDetailPage() {
         )}
 
         {/* Notes */}
-        {invoice.notes && (
+        {invoice.notes && !isService && (
           <div className="pt-6 space-y-1.5 text-xs" style={{ borderTop: "1px solid #f1f5f9" }}>
             <h4 className="font-bold uppercase tracking-wider" style={{ color: "#94a3b8" }}>Notes</h4>
             <p className="leading-relaxed whitespace-pre-line" style={{ color: "#64748b" }}>{invoice.notes}</p>

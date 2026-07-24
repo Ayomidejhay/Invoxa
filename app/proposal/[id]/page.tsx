@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useMemo } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/format";
-import { FiClock, FiCalendar, FiBriefcase, FiCheckCircle, FiFileText, FiCheck, FiInfo, FiLayers } from "react-icons/fi";
+import { FiClock, FiCalendar, FiBriefcase, FiCheckCircle, FiFileText, FiCheck, FiInfo, FiLayers, FiPrinter, FiDownload } from "react-icons/fi";
 import { motion } from "framer-motion";
 
 type ProposalData = {
@@ -134,6 +134,22 @@ export default function PublicProposalPage({ params }: { params: Promise<{ id: s
   const [proposal, setProposal] = useState<ProposalData | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectionSuccess, setSelectionSuccess] = useState(false);
+
+  const parsedServiceNotes = useMemo(() => {
+    if (!proposal?.notes) return { name: "", description: "" };
+    try {
+      const parsed = JSON.parse(proposal.notes);
+      if (parsed && typeof parsed === "object" && "name" in parsed) {
+        return {
+          name: parsed.name || "",
+          description: parsed.description || "",
+        };
+      }
+    } catch (e) {
+      // Ignored
+    }
+    return { name: "", description: proposal.notes };
+  }, [proposal?.notes]);
 
   useEffect(() => {
     if (id === "mock") {
@@ -329,35 +345,37 @@ export default function PublicProposalPage({ params }: { params: Promise<{ id: s
         </motion.div>
 
         {/* Success or Existing Selection State */}
-        {(selectionSuccess || !isProposalPending) && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1, transition: { type: "spring", stiffness: 120 } }}
-            className="backdrop-blur-md bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02] border border-emerald-500/20 dark:border-emerald-500/15 p-8 rounded-3xl text-center space-y-6 relative overflow-hidden"
-          >
-            {/* Background pattern */}
-            <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+        {(() => {
+          const selectedOpt = proposal.selected_pricing_option;
+          const chosenPlan = selectedOpt ? proposal.pricing_options?.[selectedOpt as "hourly" | "daily" | "flat"] : null;
+          
+          if (!selectionSuccess && isProposalPending) return null;
+          
+          return (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1, transition: { type: "spring", stiffness: 120 } }}
+              className="backdrop-blur-md bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02] border border-emerald-500/20 dark:border-emerald-500/15 p-8 rounded-3xl text-center space-y-6 relative overflow-hidden print:hidden"
+            >
+              {/* Background pattern */}
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="w-16 h-16 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl mx-auto shadow-sm border border-emerald-500/20">
-              <FiCheckCircle className="w-8 h-8" />
-            </div>
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl mx-auto shadow-sm border border-emerald-500/20">
+                <FiCheckCircle className="w-8 h-8" />
+              </div>
 
-            <div className="space-y-2">
-              <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-400 tracking-tight">
-                Billing Plan Confirmed!
-              </h2>
-              <p className="text-sm text-zinc-650 dark:text-zinc-300 leading-relaxed max-w-lg mx-auto font-medium">
-                Thank you! You have selected the <strong className="uppercase text-emerald-700 dark:text-emerald-400">{proposal.selected_pricing_option}</strong> option for this engagement. 
-                The team at <strong>{proposal.org_name}</strong> is finalizing your official invoice details now.
-              </p>
-            </div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-400 tracking-tight">
+                  Billing Plan Confirmed!
+                </h2>
+                <p className="text-sm text-zinc-650 dark:text-zinc-355 leading-relaxed max-w-lg mx-auto font-medium">
+                  Thank you! You have selected the <strong className="uppercase text-emerald-700 dark:text-emerald-400">{proposal.selected_pricing_option}</strong> option for this engagement. 
+                  The team at <strong>{proposal.org_name}</strong> is finalizing your official invoice details now.
+                </p>
+              </div>
 
-            {/* Premium Plan Details Summary Card */}
-            {(() => {
-              const selectedOpt = proposal.selected_pricing_option;
-              const chosenPlan = selectedOpt ? proposal.pricing_options?.[selectedOpt as "hourly" | "daily" | "flat"] : null;
-              if (!chosenPlan) return null;
-              return (
+              {/* Premium Plan Details Summary Card */}
+              {chosenPlan && (
                 <div className="bg-white/60 dark:bg-zinc-950/40 border border-slate-200/50 dark:border-zinc-800/40 rounded-2xl p-6 text-left space-y-4 max-w-md mx-auto shadow-inner relative overflow-hidden backdrop-blur-sm">
                   <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-deepgreen/5 to-transparent rounded-bl-full pointer-events-none" />
                   <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-zinc-400 dark:text-zinc-500">Locked-in Plan Details</h4>
@@ -387,51 +405,308 @@ export default function PublicProposalPage({ params }: { params: Promise<{ id: s
                     </span>
                   </div>
                 </div>
-              );
-            })()}
+              )}
 
-            <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-850 rounded-2xl shadow-sm text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Locked Selection: {proposal.selected_pricing_option?.toUpperCase()} PLAN
-            </div>
-
-            {/* Next Steps Timeline */}
-            <div className="border-t border-slate-200/50 dark:border-zinc-800/60 pt-8 max-w-md mx-auto space-y-4">
-              <h4 className="text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Next Steps Timeline</h4>
-              <div className="relative pl-6 space-y-6 text-left border-l border-slate-200 dark:border-zinc-800 ml-3">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                <div className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-850 rounded-2xl shadow-sm text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Locked Selection: {proposal.selected_pricing_option?.toUpperCase()} PLAN
+                </div>
                 
-                <div className="relative">
-                  <span className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#070809] flex items-center justify-center">
-                    <FiCheck className="w-2.5 h-2.5 text-white" />
-                  </span>
-                  <div>
-                    <h5 className="text-xs font-bold text-zinc-800 dark:text-zinc-200">Pricing Option Selected</h5>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Choice locked in to {proposal.selected_pricing_option?.toUpperCase()} billing model.</p>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <span className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#070809] flex items-center justify-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                  </span>
-                  <div>
-                    <h5 className="text-xs font-bold text-zinc-850 dark:text-zinc-200">Invoice Generation & Finalization</h5>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">The agency is drafting the invoice items based on the selected choice.</p>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <span className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-slate-200 dark:bg-zinc-800 border-2 border-white dark:border-[#070809]" />
-                  <div>
-                    <h5 className="text-xs font-bold text-zinc-650 dark:text-zinc-400">Secure Payment Link Delivered</h5>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">You will receive an email notice once the invoice is ready for checkout.</p>
-                  </div>
-                </div>
-
+                <button
+                  onClick={() => window.print()}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#355834] dark:bg-lightgreen text-white dark:text-dark rounded-2xl font-bold text-xs hover:opacity-90 shadow-sm transition-all cursor-pointer select-none"
+                >
+                  <FiPrinter className="w-3.5 h-3.5" /> Download / Print Invoice
+                </button>
               </div>
-            </div>
-          </motion.div>
-        )}
+
+              {/* Show Invoice Sheet directly in the web view as a preview! */}
+              <div className="border-t border-slate-200/50 dark:border-zinc-800/60 pt-6 space-y-3">
+                <h4 className="text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Invoice Document Preview</h4>
+                
+                <div 
+                  className="bg-white dark:bg-zinc-950 text-dark dark:text-white p-6 md:p-8 border border-slate-200/60 dark:border-zinc-800/80 rounded-2xl shadow-inner space-y-6 overflow-hidden text-left"
+                >
+                  <div className="flex justify-between items-start border-b border-slate-150 dark:border-zinc-900 pb-4">
+                    <div className="flex items-center gap-3">
+                      {proposal.org_logo_url ? (
+                        <img
+                          src={proposal.org_logo_url}
+                          alt="logo"
+                          className="h-10 w-10 object-cover rounded-lg border border-[#e2e8f0] dark:border-zinc-800"
+                        />
+                      ) : (
+                        <div
+                          className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs uppercase tracking-wider bg-zinc-900"
+                        >
+                          {proposal.org_name ? proposal.org_name[0] : "B"}
+                        </div>
+                      )}
+                      <div>
+                        <h2 className="text-sm font-bold text-zinc-850 dark:text-zinc-100">{proposal.org_name}</h2>
+                        <p className="text-[9px] text-zinc-400">Service Provider</p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="inline-block px-2 py-0.5 rounded text-[8px] font-bold bg-emerald-100 dark:bg-emerald-950/20 text-emerald-850 dark:text-emerald-400 border border-emerald-200/30 uppercase tracking-widest">
+                        Accepted
+                      </span>
+                      <p className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 mt-1">#{proposal.invoice_number}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-[10px]">
+                    <div className="space-y-0.5">
+                      <span className="block text-[8px] font-bold text-zinc-400 uppercase tracking-wider">Prepared For</span>
+                      <span className="font-bold text-zinc-700 dark:text-zinc-300">{proposal.customer_name}</span>
+                    </div>
+                    <div className="space-y-0.5 text-right">
+                      <span className="block text-[8px] font-bold text-zinc-400 uppercase tracking-wider">Plan Selected</span>
+                      <span className="font-bold text-zinc-700 dark:text-zinc-300 capitalize">{proposal.selected_pricing_option} Rate Plan</span>
+                    </div>
+                  </div>
+
+                  {parsedServiceNotes.name && (
+                    <div className="p-4 rounded-xl border border-slate-100 dark:border-zinc-900 bg-slate-50/50 dark:bg-zinc-950/50 space-y-2">
+                      <h4 className="font-extrabold text-[10px] uppercase tracking-wider text-deepgreen dark:text-lightgreen border-b border-slate-100/50 dark:border-zinc-900 pb-1">
+                        {parsedServiceNotes.name}
+                      </h4>
+                      <div className="text-[10px] text-zinc-650 dark:text-zinc-400 leading-relaxed pl-0.5 whitespace-pre-line">
+                        {parsedServiceNotes.description}
+                      </div>
+                    </div>
+                  )}
+
+                  {chosenPlan && (
+                    <div className="pt-2">
+                      <table className="w-full text-[10px]">
+                        <thead>
+                          <tr style={{ borderTop: "1px solid #f1f5f9", borderBottom: "1px solid #f1f5f9", background: "#f8fafc" }} className="dark:bg-zinc-900/30 dark:border-zinc-900">
+                            <th className="p-2 text-left font-bold text-[8px] uppercase tracking-wider text-zinc-500">Description</th>
+                            <th className="p-2 text-center font-bold text-[8px] uppercase tracking-wider text-zinc-500">Qty</th>
+                            <th className="p-2 text-right font-bold text-[8px] uppercase tracking-wider text-zinc-500">Unit Price</th>
+                            <th className="p-2 text-right font-bold text-[8px] uppercase tracking-wider text-zinc-500">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr style={{ borderBottom: "1px solid #f1f5f9" }} className="dark:border-zinc-900">
+                            <td className="p-2 font-medium text-zinc-800 dark:text-zinc-200">
+                              {chosenPlan.label || `${proposal.selected_pricing_option?.toUpperCase()} billing plan`}
+                            </td>
+                            <td className="p-2 text-center font-mono text-zinc-600 dark:text-zinc-400">
+                              {chosenPlan.quantity}
+                            </td>
+                            <td className="p-2 text-right font-mono text-zinc-600 dark:text-zinc-400">
+                              {formatCurrency(chosenPlan.rate, proposal.currency)}
+                            </td>
+                            <td className="p-2 text-right font-semibold font-mono text-zinc-800 dark:text-zinc-100">
+                              {formatCurrency(chosenPlan.rate * chosenPlan.quantity, proposal.currency)}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {chosenPlan && (
+                    <div className="flex justify-end pt-3" style={{ borderTop: "1px solid #f1f5f9" }}>
+                      <div className="w-full max-w-[180px] space-y-1 text-[10px]">
+                        <div className="flex justify-between text-zinc-500">
+                          <span>Subtotal</span>
+                          <span className="font-mono text-zinc-800 dark:text-zinc-200">{formatCurrency(chosenPlan.rate * chosenPlan.quantity, proposal.currency)}</span>
+                        </div>
+                        <div
+                          className="flex justify-between font-bold text-xs pt-1 text-deepgreen dark:text-lightgreen"
+                          style={{ borderTop: "1px solid #f1f5f9" }}
+                        >
+                          <span>Total</span>
+                          <span className="font-mono">{formatCurrency(chosenPlan.rate * chosenPlan.quantity, proposal.currency)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Next Steps Timeline */}
+              <div className="border-t border-slate-200/50 dark:border-zinc-800/60 pt-6 max-w-md mx-auto space-y-4">
+                <h4 className="text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Next Steps Timeline</h4>
+                <div className="relative pl-6 space-y-6 text-left border-l border-slate-200 dark:border-zinc-800 ml-3">
+                  <div className="relative">
+                    <span className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#070809] flex items-center justify-center">
+                      <FiCheck className="w-2.5 h-2.5 text-white" />
+                    </span>
+                    <div>
+                      <h5 className="text-xs font-bold text-zinc-850 dark:text-zinc-200">Pricing Option Selected</h5>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Choice locked in to {proposal.selected_pricing_option?.toUpperCase()} billing model.</p>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <span className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#070809] flex items-center justify-center">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                    </span>
+                    <div>
+                      <h5 className="text-xs font-bold text-zinc-850 dark:text-zinc-200">Invoice Generation & Finalization</h5>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">The agency is drafting the invoice items based on the selected choice.</p>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <span className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-slate-200 dark:bg-zinc-800 border-2 border-white dark:border-[#070809]" />
+                    <div>
+                      <h5 className="text-xs font-bold text-zinc-650 dark:text-zinc-400">Secure Payment Link Delivered</h5>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">You will receive an email notice once the invoice is ready for checkout.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
+
+        {/* Printable Invoice Sheet (Clean design, strictly for print) */}
+        {(() => {
+          const selectedOpt = proposal.selected_pricing_option;
+          const chosenPlan = selectedOpt ? proposal.pricing_options?.[selectedOpt as "hourly" | "daily" | "flat"] : null;
+          if (!chosenPlan || (isProposalPending && !selectionSuccess)) return null;
+          return (
+            <>
+              {/* CSS Print Overrides */}
+              <style jsx global>{`
+                @media print {
+                  body * {
+                    visibility: hidden !important;
+                  }
+                  #invoice-sheet, #invoice-sheet * {
+                    visibility: visible !important;
+                  }
+                  #invoice-sheet {
+                    display: block !important;
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    background: white !important;
+                    color: black !important;
+                  }
+                }
+              `}</style>
+              
+              <div 
+                id="invoice-sheet"
+                className="hidden print:block bg-white text-black p-12 border border-slate-250 rounded-2xl shadow-none space-y-10 overflow-hidden text-left"
+              >
+                {/* Header */}
+                <div className="flex justify-between items-start border-b border-[#f1f5f9] pb-8">
+                  <div className="flex items-center gap-4">
+                    {proposal.org_logo_url ? (
+                      <img
+                        src={proposal.org_logo_url}
+                        alt="logo"
+                        className="h-16 w-16 object-cover rounded-xl border border-[#e2e8f0]"
+                      />
+                    ) : (
+                      <div
+                        className="w-14 h-14 rounded-xl flex items-center justify-center text-white font-bold text-xl uppercase tracking-wider bg-zinc-900"
+                      >
+                        {proposal.org_name ? proposal.org_name[0] : "B"}
+                      </div>
+                    )}
+                    <div>
+                      <h2 className="text-xl font-bold text-zinc-900">{proposal.org_name}</h2>
+                      <p className="text-xs text-zinc-550">Service Provider</p>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-105 text-emerald-800 border border-emerald-200 uppercase tracking-widest">
+                      Accepted
+                    </span>
+                    <p className="text-sm font-mono text-zinc-800 font-bold mt-2">#{proposal.invoice_number}</p>
+                  </div>
+                </div>
+
+                {/* Client & Date Details */}
+                <div className="grid grid-cols-2 gap-8 text-xs">
+                  <div className="space-y-1">
+                    <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Prepared For</span>
+                    <span className="font-bold text-base text-zinc-800">{proposal.customer_name}</span>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Plan Selected</span>
+                    <span className="font-bold text-sm text-zinc-800 capitalize">{proposal.selected_pricing_option} Rate Plan</span>
+                  </div>
+                </div>
+
+                {/* Service Details Card */}
+                {parsedServiceNotes.name && (
+                  <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-4">
+                    <h4 className="font-extrabold text-xs uppercase tracking-wider text-[#355834] border-b border-slate-100 pb-2">
+                      {parsedServiceNotes.name}
+                    </h4>
+                    <div className="text-xs text-zinc-700 leading-relaxed whitespace-pre-line">
+                      {parsedServiceNotes.description}
+                    </div>
+                  </div>
+                )}
+
+                {/* Items table showing virtual item */}
+                <div className="pt-6">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr style={{ borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+                        <th className="p-3 text-left font-bold text-[10px] uppercase tracking-wider text-zinc-500">Description</th>
+                        <th className="p-3 text-center font-bold text-[10px] uppercase tracking-wider text-zinc-500">Qty</th>
+                        <th className="p-3 text-right font-bold text-[10px] uppercase tracking-wider text-zinc-500">Unit Price</th>
+                        <th className="p-3 text-right font-bold text-[10px] uppercase tracking-wider text-zinc-500">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <td className="p-3 font-semibold text-zinc-800">
+                          {chosenPlan.label || `${proposal.selected_pricing_option?.toUpperCase()} billing plan`}
+                        </td>
+                        <td className="p-3 text-center font-mono text-zinc-600">
+                          {chosenPlan.quantity}
+                        </td>
+                        <td className="p-3 text-right font-mono text-zinc-600">
+                          {formatCurrency(chosenPlan.rate, proposal.currency)}
+                        </td>
+                        <td className="p-3 text-right font-semibold font-mono text-zinc-800">
+                          {formatCurrency(chosenPlan.rate * chosenPlan.quantity, proposal.currency)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Summary Block */}
+                <div className="flex justify-end pt-6" style={{ borderTop: "1px solid #f1f5f9" }}>
+                  <div className="w-full max-w-xs space-y-2 text-xs">
+                    <div className="flex justify-between text-zinc-500">
+                      <span>Subtotal</span>
+                      <span className="font-mono text-zinc-800">{formatCurrency(chosenPlan.rate * chosenPlan.quantity, proposal.currency)}</span>
+                    </div>
+                    <div
+                      className="flex justify-between font-bold text-sm pt-2 text-[#355834]"
+                      style={{ borderTop: "1px solid #355834" }}
+                    >
+                      <span>Total contract value</span>
+                      <span className="font-mono text-[#355834]">{formatCurrency(chosenPlan.rate * chosenPlan.quantity, proposal.currency)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          );
+        })()}
 
         {/* Detailed Notes / Overview */}
         {proposal.notes && (
@@ -462,8 +737,16 @@ export default function PublicProposalPage({ params }: { params: Promise<{ id: s
               </span>
             </div>
 
+            {parsedServiceNotes.name && (
+              <div className="px-1 mt-2">
+                <h3 className="text-base font-extrabold text-zinc-800 dark:text-zinc-100">
+                  {parsedServiceNotes.name}
+                </h3>
+              </div>
+            )}
+
             <div className="pl-1">
-              {renderFormattedNotes(proposal.notes)}
+              {renderFormattedNotes(parsedServiceNotes.description)}
             </div>
           </motion.div>
         )}

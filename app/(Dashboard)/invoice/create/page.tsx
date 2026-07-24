@@ -39,6 +39,9 @@ export default function CreateInvoicePage() {
   const [dailyOption, setDailyOption] = useState({ active: false, rate: 0, quantity: 5, label: "Daily Rate Plan" });
   const [flatOption, setFlatOption] = useState({ active: false, rate: 0, quantity: 1, label: "Fixed Project Plan" });
 
+  const [serviceName, setServiceName] = useState("");
+  const [serviceDescription, setServiceDescription] = useState("");
+
   const [form, setForm] = useState({
     customer_id: "",
     type: "sale" as InvoiceType,
@@ -212,7 +215,7 @@ export default function CreateInvoicePage() {
       p_start_date: (form.type === "rental" || form.type === "service") ? (form.start_date || null) : null,
       p_end_date: (form.type === "rental" || form.type === "service") ? (form.end_date || null) : null,
       p_due_date: form.due_date || null,
-      p_notes: form.notes || null,
+      p_notes: form.type === "service" ? JSON.stringify({ name: serviceName, description: serviceDescription }) : (form.notes || null),
       p_currency: invoiceCurrency,
       p_conversion_factor: getConversionFactor(),
       p_pricing_options: rpcPricingOptions as any,
@@ -588,12 +591,31 @@ export default function CreateInvoicePage() {
           </div>
         )}
 
-        <Textarea
-          label={form.type === "service" && isProposal ? "Service Description / Project Scope & Deliverables" : "Notes (optional)"}
-          placeholder={form.type === "service" && isProposal ? "Provide a detailed description of the project scope, deliverables, and service terms for the client..." : "e.g. Thank you for your business!"}
-          value={form.notes}
-          onChange={(e) => setForm({ ...form, notes: e.target.value })}
-        />
+        {form.type === "service" ? (
+          <>
+            <Input
+              label="Service Name / Project Title"
+              placeholder="e.g. E-Commerce Website Redesign"
+              value={serviceName}
+              onChange={(e) => setServiceName(e.target.value)}
+              required
+            />
+            <Textarea
+              label="Service Description / Project Scope & Deliverables"
+              placeholder="Provide a detailed description of the project scope, deliverables, and service terms for the client..."
+              value={serviceDescription}
+              onChange={(e) => setServiceDescription(e.target.value)}
+              required
+            />
+          </>
+        ) : (
+          <Textarea
+            label="Notes (optional)"
+            placeholder="e.g. Thank you for your business!"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          />
+        )}
 
         <div className="flex items-center justify-between pt-4 border-t border-slate-250 dark:border-zinc-800">
           <span className="text-sm text-zinc-550 dark:text-zinc-400 font-medium">Total</span>
