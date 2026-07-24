@@ -316,16 +316,6 @@ export default function InvoiceDetailPage() {
     return items.reduce((s, it) => s + (it.total_price || 0), 0);
   }, [items]);
 
-  if (loading || !invoice) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <span className="h-6 w-6 rounded-full border-2 border-deepgreen border-t-transparent animate-spin" />
-      </div>
-    );
-  }
-
-  const isRental = invoice.type === "rental";
-  const isService = invoice.type === "service";
   const parsedServiceNotes = useMemo(() => {
     if (!invoice?.notes) return { name: "", description: "" };
     try {
@@ -341,6 +331,17 @@ export default function InvoiceDetailPage() {
     }
     return { name: "", description: invoice.notes };
   }, [invoice?.notes]);
+
+  if (loading || !invoice) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <span className="h-6 w-6 rounded-full border-2 border-deepgreen border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  const isRental = invoice.type === "rental";
+  const isService = invoice.type === "service";
   const currency = invoice.currency || org.currency || "NGN";
   const effectiveTotal = invoice.total > 0 ? invoice.total : grandTotal;
   const balanceDue = effectiveTotal - invoice.amount_paid;
