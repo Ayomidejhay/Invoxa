@@ -1501,18 +1501,20 @@ export default function InvoiceDetailPage() {
             overflow: visible !important;
           }
           /* Expand layouts to print at full width without sidebar offsets */
-          div, main, section {
+          main, section, .max-w-4xl {
             height: auto !important;
             overflow: visible !important;
             margin-left: 0 !important;
             margin-right: 0 !important;
             padding-left: 0 !important;
             padding-right: 0 !important;
+            max-width: none !important;
+            width: 100% !important;
           }
           #invoice {
             border: none !important;
             box-shadow: none !important;
-            padding: 0 !important;
+            padding: 4mm !important;
             margin: 0 !important;
             overflow: visible !important;
             min-width: 0 !important;

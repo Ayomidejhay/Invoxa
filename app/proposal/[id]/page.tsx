@@ -4,7 +4,8 @@ import { useEffect, useState, use, useMemo } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/format";
 import { FiClock, FiCalendar, FiBriefcase, FiCheckCircle, FiFileText, FiCheck, FiInfo, FiLayers, FiPrinter, FiDownload, FiX } from "react-icons/fi";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/app/components/ui/Toast";
 
 type ProposalData = {
   id: string;
@@ -128,12 +129,15 @@ const renderFormattedNotes = (text: string) => {
 export default function PublicProposalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const supabase = getSupabaseClient();
+  const toast = useToast();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [proposal, setProposal] = useState<ProposalData | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectionSuccess, setSelectionSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const parsedServiceNotes = useMemo(() => {
     if (!proposal?.notes) return { name: "", description: "" };
@@ -214,11 +218,54 @@ export default function PublicProposalPage({ params }: { params: Promise<{ id: s
     });
   };
 
+  const handleCopyLink = () => {
+    if (typeof window === "undefined") return;
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    toast.success("Receipt link copied!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const downloadPDF = async () => {
+    if (!proposal) return;
+
+    const safeInvoiceNumber = (proposal.invoice_number || proposal.id.slice(0, 8))
+      .replace(/[^a-zA-Z0-9-_\s.]/g, "_");
+    const filename = `invoice-${safeInvoiceNumber}.pdf`;
+
+    const triggerDownload = (blob: Blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    };
+
+    setDownloading(true);
+    try {
+      const response = await fetch(`/api/invoice/${proposal.id}/pdf`);
+      if (!response.ok) {
+        const resData = await response.json().catch(() => ({}));
+        throw new Error(resData?.error || "Failed to generate PDF");
+      }
+      const blob = await response.blob();
+      triggerDownload(blob);
+      toast.success("PDF downloaded successfully!");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to download PDF. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const executeOptionSelection = async () => {
     if (!proposal || !pendingChoice || submitting) return;
     const option = pendingChoice.option;
     setSubmitting(true);
-    setPendingChoice(null);
 
     if (proposal.id === "mock") {
       setTimeout(() => {
@@ -233,6 +280,8 @@ export default function PublicProposalPage({ params }: { params: Promise<{ id: s
             : null
         );
         setSubmitting(false);
+        setPendingChoice(null);
+        toast.success("Pricing plan locked in successfully!");
       }, 800);
       return;
     }
@@ -257,9 +306,11 @@ export default function PublicProposalPage({ params }: { params: Promise<{ id: s
             }
           : null
       );
+      setPendingChoice(null);
+      toast.success("Pricing plan locked in successfully!");
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to lock in your pricing choice. Please try again.");
+      toast.error(err.message || "Failed to lock in your pricing choice. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -363,156 +414,119 @@ export default function PublicProposalPage({ params }: { params: Promise<{ id: s
           if (!selectionSuccess && isProposalPending) return null;
           
           return (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1, transition: { type: "spring", stiffness: 120 } }}
-              className="backdrop-blur-md bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02] border border-emerald-500/20 dark:border-emerald-500/15 p-8 rounded-3xl text-center space-y-6 relative overflow-hidden print:hidden"
-            >
-              {/* Background pattern */}
-              <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-
-              <div className="w-16 h-16 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl mx-auto shadow-sm border border-emerald-500/20">
-                <FiCheckCircle className="w-8 h-8" />
-              </div>
-
-              <div className="space-y-2">
-                <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-400 tracking-tight">
-                  Billing Plan Confirmed!
-                </h2>
-                <p className="text-sm text-zinc-650 dark:text-zinc-355 leading-relaxed max-w-lg mx-auto font-medium">
-                  Thank you! You have selected the <strong className="uppercase text-emerald-700 dark:text-emerald-400">{proposal.selected_pricing_option}</strong> option for this engagement. 
-                  The team at <strong>{proposal.org_name}</strong> is finalizing your official invoice details now.
-                </p>
-              </div>
-
-              {/* Premium Plan Details Summary Card */}
-              {chosenPlan && (
-                <div className="bg-white/60 dark:bg-zinc-950/40 border border-slate-200/50 dark:border-zinc-800/40 rounded-2xl p-6 text-left space-y-4 max-w-md mx-auto shadow-inner relative overflow-hidden backdrop-blur-sm">
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-deepgreen/5 to-transparent rounded-bl-full pointer-events-none" />
-                  <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-zinc-400 dark:text-zinc-500">Locked-in Plan Details</h4>
-                  
-                  <div className="flex justify-between items-start border-b border-slate-100 dark:border-zinc-800/60 pb-3">
-                    <div>
-                      <h5 className="font-extrabold text-sm text-zinc-800 dark:text-zinc-200 capitalize">{proposal.selected_pricing_option} Rate Plan</h5>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">{chosenPlan.label || "Service billing contract rate."}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-sm font-extrabold text-zinc-800 dark:text-zinc-200 font-mono">
-                        {formatCurrency(chosenPlan.rate, proposal.currency)}
-                      </span>
-                      <span className="text-[10px] text-zinc-500 block">/ {proposal.selected_pricing_option === "hourly" ? "hr" : proposal.selected_pricing_option === "daily" ? "day" : "fixed"}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center text-xs text-zinc-650 dark:text-zinc-400 pt-1">
-                    <span>Estimated Volume</span>
-                    <span className="font-bold text-zinc-700 dark:text-zinc-300 font-mono">{chosenPlan.quantity} {proposal.selected_pricing_option === "hourly" ? "hrs" : proposal.selected_pricing_option === "daily" ? "days" : "project"}</span>
-                  </div>
-                  
-                  <div className="border-t border-dashed border-slate-200 dark:border-zinc-800 pt-3 flex justify-between items-center font-bold text-sm text-zinc-800 dark:text-zinc-200">
-                    <span className="text-xs text-zinc-550 dark:text-zinc-400">Total Contract Value</span>
-                    <span className="font-mono text-deepgreen dark:text-lightgreen">
-                      {formatCurrency(chosenPlan.rate * chosenPlan.quantity, proposal.currency)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-                <div className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-850 rounded-2xl shadow-sm text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Locked Selection: {proposal.selected_pricing_option?.toUpperCase()} PLAN
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start print:hidden text-left">
+              
+              {/* Left Column - Main Invoice Document (Skeuomorphic Paper Sheet) */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="lg:col-span-8 bg-white dark:bg-zinc-950 border border-slate-200/80 dark:border-zinc-900 rounded-3xl shadow-xl overflow-hidden relative"
+              >
+                {/* Top border color line matching brand green */}
+                <div className="h-1.5 w-full bg-deepgreen" />
                 
-                <button
-                  onClick={() => window.print()}
-                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#355834] dark:bg-lightgreen text-white dark:text-dark rounded-2xl font-bold text-xs hover:opacity-90 shadow-sm transition-all cursor-pointer select-none"
-                >
-                  <FiPrinter className="w-3.5 h-3.5" /> Download / Print Invoice
-                </button>
-              </div>
-
-              {/* Show Invoice Sheet directly in the web view as a preview! */}
-              <div className="border-t border-slate-200/50 dark:border-zinc-800/60 pt-6 space-y-3">
-                <h4 className="text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Invoice Document Preview</h4>
+                {/* Subtle digital paper pattern / lines */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(241,245,249,0.08)_1px,transparent_1px)] bg-[size:100%_24px] pointer-events-none opacity-50" />
                 
-                <div 
-                  className="bg-white dark:bg-zinc-950 text-dark dark:text-white p-6 md:p-8 border border-slate-200/60 dark:border-zinc-800/80 rounded-2xl shadow-inner space-y-6 overflow-hidden text-left"
-                >
-                  <div className="flex justify-between items-start border-b border-slate-150 dark:border-zinc-900 pb-4">
-                    <div className="flex items-center gap-3">
+                {/* Visual Digital Seal Stamp */}
+                <div className="absolute top-10 right-10 z-20 pointer-events-auto">
+                  <motion.div 
+                    whileHover={{ scale: 1.05, rotate: 8 }}
+                    className="w-24 h-24 rounded-full border border-dashed border-deepgreen/40 dark:border-lightgreen/30 flex items-center justify-center p-1 cursor-pointer select-none relative group"
+                  >
+                    <svg viewBox="0 0 100 100" className="w-full h-full animate-[spin_25s_linear_infinite] text-deepgreen dark:text-lightgreen fill-none">
+                      <path id="circlePath" d="M 50, 50 m -37, 0 a 37,37 0 1,1 74,0 a 37,37 0 1,1 -74,0" />
+                      <text className="text-[7px] uppercase font-mono font-bold tracking-[2.5px] fill-current">
+                        <textPath href="#circlePath">
+                          • SECURED WITH INVOXA • FINALIZED & ACTIVE
+                        </textPath>
+                      </text>
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center flex-col">
+                      <FiCheckCircle className="w-5 h-5 text-deepgreen dark:text-lightgreen group-hover:scale-110 transition-transform duration-300" />
+                      <span className="text-[6px] font-mono font-extrabold text-deepgreen dark:text-lightgreen uppercase tracking-wider mt-0.5">Active</span>
+                    </div>
+                  </motion.div>
+                </div>
+
+                <div className="p-8 md:p-10 space-y-8">
+                  {/* Header: Brand details & Invoice meta */}
+                  <div className="flex justify-between items-start border-b border-slate-100 dark:border-zinc-900 pb-6">
+                    <div className="flex items-center gap-4">
                       {proposal.org_logo_url ? (
                         <img
                           src={proposal.org_logo_url}
-                          alt="logo"
-                          className="h-10 w-10 object-cover rounded-lg border border-[#e2e8f0] dark:border-zinc-800"
+                          alt={proposal.org_name}
+                          className="w-12 h-12 rounded-xl object-contain bg-slate-50 dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800/80 p-1"
                         />
                       ) : (
-                        <div
-                          className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs uppercase tracking-wider bg-zinc-900"
-                        >
-                          {proposal.org_name ? proposal.org_name[0] : "B"}
+                        <div className="w-12 h-12 rounded-xl bg-deepgreen/10 dark:bg-deepgreen/20 flex items-center justify-center font-extrabold text-lg text-deepgreen dark:text-lightgreen border border-deepgreen/10">
+                          {proposal.org_name.slice(0, 2).toUpperCase()}
                         </div>
                       )}
                       <div>
-                        <h2 className="text-sm font-bold text-zinc-850 dark:text-zinc-100">{proposal.org_name}</h2>
-                        <p className="text-[9px] text-zinc-400">Service Provider</p>
+                        <h2 className="text-sm font-extrabold text-zinc-900 dark:text-white tracking-tight">{proposal.org_name}</h2>
+                        <p className="text-[9px] text-zinc-400 dark:text-zinc-550 uppercase tracking-widest font-bold mt-0.5">Service Provider</p>
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <span className="inline-block px-2 py-0.5 rounded text-[8px] font-bold bg-emerald-100 dark:bg-emerald-950/20 text-emerald-850 dark:text-emerald-400 border border-emerald-200/30 uppercase tracking-widest">
-                        Accepted
+                    <div className="text-right pr-28">
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-[#355834]/10 dark:bg-[#8bb174]/15 text-[#355834] dark:text-[#8bb174] border border-[#355834]/20 uppercase tracking-wide">
+                        FINALIZED
                       </span>
-                      <p className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 mt-1">#{proposal.invoice_number}</p>
+                      <p className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mt-1.5">#{proposal.invoice_number}</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 text-[10px]">
-                    <div className="space-y-0.5">
-                      <span className="block text-[8px] font-bold text-zinc-400 uppercase tracking-wider">Prepared For</span>
+                  {/* Customer and billing metadata */}
+                  <div className="grid grid-cols-2 gap-8 text-[11px]">
+                    <div className="space-y-1">
+                      <span className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Prepared For</span>
                       <span className="font-bold text-zinc-700 dark:text-zinc-300">{proposal.customer_name}</span>
                     </div>
-                    <div className="space-y-0.5 text-right">
-                      <span className="block text-[8px] font-bold text-zinc-400 uppercase tracking-wider">Plan Selected</span>
+                    <div className="space-y-1 text-right">
+                      <span className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Plan Selected</span>
                       <span className="font-bold text-zinc-700 dark:text-zinc-300 capitalize">{proposal.selected_pricing_option} Rate Plan</span>
                     </div>
                   </div>
 
+                  {/* Scope Details (notes preview) */}
                   {parsedServiceNotes.name && (
-                    <div className="p-4 rounded-xl border border-slate-100 dark:border-zinc-900 bg-slate-50/50 dark:bg-zinc-950/50 space-y-2">
-                      <h4 className="font-extrabold text-[10px] uppercase tracking-wider text-deepgreen dark:text-lightgreen border-b border-slate-100/50 dark:border-zinc-900 pb-1">
+                    <div className="p-5 rounded-2xl border border-slate-100 dark:border-zinc-900 bg-slate-50/50 dark:bg-zinc-950/40 space-y-2">
+                      <h4 className="font-extrabold text-[9px] uppercase tracking-wider text-deepgreen dark:text-lightgreen border-b border-slate-150/60 dark:border-zinc-900/60 pb-2">
                         {parsedServiceNotes.name}
                       </h4>
-                      <div className="text-[10px] text-zinc-650 dark:text-zinc-400 leading-relaxed pl-0.5 whitespace-pre-line">
+                      <div className="text-[11px] text-zinc-650 dark:text-zinc-400 leading-relaxed pl-0.5 whitespace-pre-line">
                         {parsedServiceNotes.description}
                       </div>
                     </div>
                   )}
 
+                  {/* Table of items */}
                   {chosenPlan && (
                     <div className="pt-2">
-                      <table className="w-full text-[10px]">
+                      <table className="w-full text-xs">
                         <thead>
-                          <tr style={{ borderTop: "1px solid #f1f5f9", borderBottom: "1px solid #f1f5f9", background: "#f8fafc" }} className="dark:bg-zinc-900/30 dark:border-zinc-900">
-                            <th className="p-2 text-left font-bold text-[8px] uppercase tracking-wider text-zinc-500">Description</th>
-                            <th className="p-2 text-center font-bold text-[8px] uppercase tracking-wider text-zinc-500">Qty</th>
-                            <th className="p-2 text-right font-bold text-[8px] uppercase tracking-wider text-zinc-500">Unit Price</th>
-                            <th className="p-2 text-right font-bold text-[8px] uppercase tracking-wider text-zinc-500">Amount</th>
+                          <tr className="border-t border-b border-slate-100 dark:border-zinc-900 bg-slate-50/30 dark:bg-zinc-950/20 text-zinc-400 dark:text-zinc-500">
+                            <th className="p-3 text-left font-bold text-[9px] uppercase tracking-wider">Description</th>
+                            <th className="p-3 text-center font-bold text-[9px] uppercase tracking-wider w-16">Qty</th>
+                            <th className="p-3 text-right font-bold text-[9px] uppercase tracking-wider w-24">Unit Price</th>
+                            <th className="p-3 text-right font-bold text-[9px] uppercase tracking-wider w-24">Amount</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr style={{ borderBottom: "1px solid #f1f5f9" }} className="dark:border-zinc-900">
-                            <td className="p-2 font-medium text-zinc-800 dark:text-zinc-200">
+                          <tr className="border-b border-slate-100 dark:border-zinc-900/60">
+                            <td className="p-3 font-semibold text-zinc-800 dark:text-zinc-200">
                               {chosenPlan.label || `${proposal.selected_pricing_option?.toUpperCase()} billing plan`}
                             </td>
-                            <td className="p-2 text-center font-mono text-zinc-600 dark:text-zinc-400">
+                            <td className="p-3 text-center font-mono text-zinc-500 dark:text-zinc-400">
                               {chosenPlan.quantity}
                             </td>
-                            <td className="p-2 text-right font-mono text-zinc-600 dark:text-zinc-400">
+                            <td className="p-3 text-right font-mono text-zinc-500 dark:text-zinc-400">
                               {formatCurrency(chosenPlan.rate, proposal.currency)}
                             </td>
-                            <td className="p-2 text-right font-semibold font-mono text-zinc-800 dark:text-zinc-100">
+                            <td className="p-3 text-right font-bold font-mono text-zinc-800 dark:text-zinc-100">
                               {formatCurrency(chosenPlan.rate * chosenPlan.quantity, proposal.currency)}
                             </td>
                           </tr>
@@ -521,60 +535,139 @@ export default function PublicProposalPage({ params }: { params: Promise<{ id: s
                     </div>
                   )}
 
+                  {/* Grand total block */}
                   {chosenPlan && (
-                    <div className="flex justify-end pt-3" style={{ borderTop: "1px solid #f1f5f9" }}>
-                      <div className="w-full max-w-[180px] space-y-1 text-[10px]">
-                        <div className="flex justify-between text-zinc-500">
+                    <div className="flex justify-end pt-2">
+                      <div className="w-full max-w-[240px] space-y-2 text-xs">
+                        <div className="flex justify-between text-zinc-550 dark:text-zinc-450">
                           <span>Subtotal</span>
-                          <span className="font-mono text-zinc-800 dark:text-zinc-200">{formatCurrency(chosenPlan.rate * chosenPlan.quantity, proposal.currency)}</span>
+                          <span className="font-mono text-zinc-700 dark:text-zinc-300">{formatCurrency(chosenPlan.rate * chosenPlan.quantity, proposal.currency)}</span>
                         </div>
-                        <div
-                          className="flex justify-between font-bold text-xs pt-1 text-deepgreen dark:text-lightgreen"
-                          style={{ borderTop: "1px solid #f1f5f9" }}
-                        >
-                          <span>Total</span>
-                          <span className="font-mono">{formatCurrency(chosenPlan.rate * chosenPlan.quantity, proposal.currency)}</span>
+                        <div className="flex justify-between font-extrabold text-sm pt-3 border-t border-slate-100 dark:border-zinc-900/60 text-deepgreen dark:text-lightgreen">
+                          <span>Grand Total</span>
+                          <span className="font-mono text-base">{formatCurrency(chosenPlan.rate * chosenPlan.quantity, proposal.currency)}</span>
                         </div>
                       </div>
                     </div>
                   )}
+
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Next Steps Timeline */}
-              <div className="border-t border-slate-200/50 dark:border-zinc-800/60 pt-6 max-w-md mx-auto space-y-4">
-                <h4 className="text-left text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Next Steps Timeline</h4>
-                <div className="relative pl-6 space-y-6 text-left border-l border-slate-200 dark:border-zinc-800 ml-3">
-                  <div className="relative">
-                    <span className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#070809] flex items-center justify-center">
-                      <FiCheck className="w-2.5 h-2.5 text-white" />
+              {/* Right Column - Status & Sidebar Control Panel */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.25 }}
+                className="lg:col-span-4 space-y-6"
+              >
+                {/* Active Capsule Status card */}
+                <div className="backdrop-blur-md bg-white/80 dark:bg-zinc-900/60 border border-slate-200/50 dark:border-zinc-800/60 p-6 rounded-3xl shadow-sm space-y-5">
+                  <div className="space-y-2">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-[#355834]/10 dark:bg-[#8bb174]/15 text-[#355834] dark:text-[#8bb174] border border-[#355834]/20 uppercase tracking-widest">
+                      <span className="w-1.5 h-1.5 rounded-full bg-deepgreen dark:bg-lightgreen animate-pulse" />
+                      Active Engagement
                     </span>
-                    <div>
-                      <h5 className="text-xs font-bold text-zinc-850 dark:text-zinc-200">Pricing Option Selected</h5>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Choice locked in to {proposal.selected_pricing_option?.toUpperCase()} billing model.</p>
-                    </div>
+                    <h3 className="text-lg font-extrabold text-zinc-850 dark:text-white tracking-tight leading-snug">
+                      Plan Locked In
+                    </h3>
+                    <p className="text-xs text-zinc-500 leading-relaxed font-medium">
+                      You have selected the <strong className="capitalize text-zinc-800 dark:text-zinc-200">{proposal.selected_pricing_option}</strong> option. The invoice has been locked and transitioned to active status.
+                    </p>
                   </div>
 
-                  <div className="relative">
-                    <span className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#070809] flex items-center justify-center">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                    </span>
-                    <div>
-                      <h5 className="text-xs font-bold text-zinc-850 dark:text-zinc-200">Invoice Generation & Finalization</h5>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">The agency is drafting the invoice items based on the selected choice.</p>
+                  {chosenPlan && (
+                    <div className="bg-slate-50/50 dark:bg-zinc-950/50 p-4 rounded-2xl border border-slate-100/50 dark:border-zinc-900/60 space-y-2 text-[11px] text-zinc-650 dark:text-zinc-400">
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-450 uppercase font-semibold text-[9px] tracking-wider">Locked rate</span>
+                        <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">
+                          {formatCurrency(chosenPlan.rate, proposal.currency)} / {proposal.selected_pricing_option === "hourly" ? "hr" : proposal.selected_pricing_option === "daily" ? "day" : "fixed"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-450 uppercase font-semibold text-[9px] tracking-wider">Estimated volume</span>
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                          {chosenPlan.quantity} {proposal.selected_pricing_option === "hourly" ? "hrs" : proposal.selected_pricing_option === "daily" ? "days" : "project"}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="relative">
-                    <span className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-slate-200 dark:bg-zinc-800 border-2 border-white dark:border-[#070809]" />
-                    <div>
-                      <h5 className="text-xs font-bold text-zinc-650 dark:text-zinc-400">Secure Payment Link Delivered</h5>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">You will receive an email notice once the invoice is ready for checkout.</p>
-                    </div>
+                  {/* Primary CTA Action group */}
+                  <div className="space-y-3 pt-2">
+                    <button
+                      onClick={downloadPDF}
+                      disabled={downloading}
+                      className="w-full py-3 bg-[#355834] hover:bg-[#2c472c] dark:bg-[#8bb174] dark:hover:bg-[#7ba064] dark:text-dark text-white rounded-2xl font-bold text-xs shadow-md shadow-[#355834]/15 hover:shadow-lg transition-all cursor-pointer inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {downloading ? (
+                        <>
+                          <span className="h-3.5 w-3.5 border-2 border-white dark:border-dark border-t-transparent rounded-full animate-spin shrink-0" />
+                          Generating PDF...
+                        </>
+                      ) : (
+                        <>
+                          <FiDownload className="w-3.5 h-3.5" /> Download Official PDF
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => window.print()}
+                      disabled={downloading}
+                      className="w-full py-3 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-[#1A1C20] text-zinc-700 dark:text-zinc-300 rounded-2xl font-bold text-xs transition-colors cursor-pointer inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <FiPrinter className="w-3.5 h-3.5" /> Print Receipt
+                    </button>
+                    
+                    <button
+                      onClick={handleCopyLink}
+                      className="w-full py-3 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-[#1A1C20] text-zinc-750 dark:text-zinc-300 rounded-2xl font-bold text-xs transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
+                    >
+                      <FiCheck className="w-3.5 h-3.5" />
+                      {copied ? "Link Copied!" : "Copy Receipt Portal URL"}
+                    </button>
                   </div>
                 </div>
-              </div>
-            </motion.div>
+
+                {/* Modern Tracked Progress Timeline */}
+                <div className="backdrop-blur-md bg-white/80 dark:bg-zinc-900/60 border border-slate-200/50 dark:border-zinc-800/60 p-6 rounded-3xl shadow-sm space-y-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-550">Engagement Timeline</h4>
+                  <div className="relative pl-5 space-y-5 text-left border-l border-slate-100 dark:border-zinc-900 ml-2">
+                    
+                    <div className="relative">
+                      <span className="absolute -left-[27px] top-0.5 w-3 h-3 rounded-full bg-deepgreen dark:bg-lightgreen border-2 border-white dark:border-[#070809] flex items-center justify-center">
+                        <span className="w-1 h-1 rounded-full bg-white dark:bg-dark" />
+                      </span>
+                      <div>
+                        <h5 className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">Plan Selection Locked</h5>
+                        <p className="text-[9.5px] text-zinc-400 mt-0.5">Choice confirmed as {proposal.selected_pricing_option?.toUpperCase()} billing model.</p>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <span className="absolute -left-[27px] top-0.5 w-3 h-3 rounded-full bg-deepgreen dark:bg-lightgreen border-2 border-white dark:border-[#070809] flex items-center justify-center">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white dark:bg-dark animate-ping" />
+                      </span>
+                      <div>
+                        <h5 className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">Invoice Drafting & Finalization</h5>
+                        <p className="text-[9.5px] text-zinc-400 mt-0.5">Agency is structuring official billing items and parameters.</p>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <span className="absolute -left-[27px] top-0.5 w-3 h-3 rounded-full bg-slate-200 dark:bg-zinc-800 border-2 border-white dark:border-[#070809]" />
+                      <div>
+                        <h5 className="text-[11px] font-bold text-zinc-500 dark:text-zinc-500">Kickoff Notice & Invoice Checkout</h5>
+                        <p className="text-[9.5px] text-zinc-450 mt-0.5">Secure payment link will be sent to your email for invoice finalization.</p>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+              </motion.div>
+            </div>
           );
         })()}
 
@@ -989,71 +1082,90 @@ export default function PublicProposalPage({ params }: { params: Promise<{ id: s
         )}
 
       {/* Custom Confirmation Modal */}
-      {pendingChoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="w-full max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800/80 rounded-3xl p-6 shadow-2xl space-y-6 relative overflow-hidden"
+      <AnimatePresence>
+        {pendingChoice && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => !submitting && setPendingChoice(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden"
           >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-deepgreen/5 to-transparent rounded-bl-full pointer-events-none" />
-            
-            <div className="flex justify-between items-start text-left">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-deepgreen/10 dark:bg-lightgreen/10 text-deepgreen dark:text-lightgreen flex items-center justify-center">
-                  <FiBriefcase className="w-5 h-5" />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800/80 rounded-3xl p-6 shadow-2xl space-y-6 relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-deepgreen/5 to-transparent rounded-bl-full pointer-events-none" />
+              
+              <div className="flex justify-between items-start text-left">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-deepgreen/10 dark:bg-lightgreen/10 text-deepgreen dark:text-lightgreen flex items-center justify-center">
+                    <FiBriefcase className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-extrabold text-zinc-800 dark:text-zinc-150">
+                      Confirm Plan Selection
+                    </h3>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">Please review your billing terms</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-zinc-800 dark:text-zinc-150">
-                    Confirm Plan Selection
-                  </h3>
-                  <p className="text-[10px] text-zinc-500 mt-0.5">Please review your billing terms</p>
+                <button 
+                  onClick={() => !submitting && setPendingChoice(null)} 
+                  disabled={submitting}
+                  className="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FiX className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-zinc-950 p-5 rounded-2xl border border-slate-100 dark:border-zinc-900 space-y-3.5 text-xs text-zinc-600 dark:text-zinc-400 text-left">
+                <p>
+                  You are about to select the <strong className="capitalize text-zinc-850 dark:text-zinc-200">{pendingChoice.option} Plan</strong>. This will lock in the billing rate and transition the proposal to draft status.
+                </p>
+                <div className="flex justify-between items-center py-2.5 border-t border-b border-dashed border-slate-200 dark:border-zinc-850 font-bold text-zinc-800 dark:text-zinc-200">
+                  <span className="text-xs text-zinc-500 font-normal">Contract Rate</span>
+                  <span className="font-mono text-deepgreen dark:text-lightgreen">
+                    {formatCurrency(pendingChoice.rate, proposal.currency)} / {pendingChoice.option === "hourly" ? "hr" : pendingChoice.option === "daily" ? "day" : "fixed"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center font-bold text-zinc-850 dark:text-zinc-200">
+                  <span className="text-xs text-zinc-500 font-normal">Proposed Total</span>
+                  <span className="font-mono text-lg text-deepgreen dark:text-lightgreen">
+                    {formatCurrency(pendingChoice.rate * pendingChoice.quantity, proposal.currency)}
+                  </span>
                 </div>
               </div>
-              <button 
-                onClick={() => setPendingChoice(null)} 
-                className="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors cursor-pointer"
-              >
-                <FiX className="w-4 h-4" />
-              </button>
-            </div>
 
-            <div className="bg-slate-50 dark:bg-zinc-950 p-5 rounded-2xl border border-slate-100 dark:border-zinc-900 space-y-3.5 text-xs text-zinc-600 dark:text-zinc-400 text-left">
-              <p>
-                You are about to select the <strong className="capitalize text-zinc-850 dark:text-zinc-200">{pendingChoice.option} Plan</strong>. This will lock in the billing rate and transition the proposal to draft status.
-              </p>
-              <div className="flex justify-between items-center py-2.5 border-t border-b border-dashed border-slate-200 dark:border-zinc-850 font-bold text-zinc-800 dark:text-zinc-200">
-                <span className="text-xs text-zinc-500 font-normal">Contract Rate</span>
-                <span className="font-mono text-deepgreen dark:text-lightgreen">
-                  {formatCurrency(pendingChoice.rate, proposal.currency)} / {pendingChoice.option === "hourly" ? "hr" : pendingChoice.option === "daily" ? "day" : "fixed"}
-                </span>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => !submitting && setPendingChoice(null)}
+                  disabled={submitting}
+                  className="flex-1 py-3 bg-slate-150 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-zinc-700 dark:text-zinc-300 rounded-2xl font-bold text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={executeOptionSelection}
+                  disabled={submitting}
+                  className="flex-1 py-3 bg-[#355834] hover:bg-[#2c472c] dark:bg-lightgreen dark:text-dark text-white rounded-2xl font-bold text-xs shadow-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <span className="h-3.5 w-3.5 border-2 border-white dark:border-dark border-t-transparent rounded-full animate-spin shrink-0" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Confirm Choice"
+                  )}
+                </button>
               </div>
-              <div className="flex justify-between items-center font-bold text-zinc-850 dark:text-zinc-200">
-                <span className="text-xs text-zinc-500 font-normal">Proposed Total</span>
-                <span className="font-mono text-lg text-deepgreen dark:text-lightgreen">
-                  {formatCurrency(pendingChoice.rate * pendingChoice.quantity, proposal.currency)}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setPendingChoice(null)}
-                className="flex-1 py-3 bg-slate-150 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-zinc-700 dark:text-zinc-300 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={executeOptionSelection}
-                className="flex-1 py-3 bg-[#355834] hover:bg-[#2c472c] dark:bg-lightgreen dark:text-dark text-white rounded-2xl font-bold text-xs shadow-md transition-colors cursor-pointer"
-              >
-                Confirm Choice
-              </button>
-            </div>
+            </motion.div>
           </motion.div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       </motion.div>
     </div>

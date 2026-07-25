@@ -64,12 +64,18 @@ export async function generatePDFBuffer(
       }
     }
 
-    // Navigate to the actual invoice page
-    const invoicePageUrl = `${origin}/invoice/${invoiceId}`;
+    // Navigate to public proposal receipt if anonymous request (no cookies),
+    // otherwise load dashboard invoice page for organization members.
+    const isPublic = !cookieHeader;
+    const invoicePageUrl = isPublic
+      ? `${origin}/proposal/${invoiceId}`
+      : `${origin}/invoice/${invoiceId}`;
+
     await page.goto(invoicePageUrl, { waitUntil: "domcontentloaded" });
 
-    // Wait for the invoice element to load and render completely
-    await page.waitForSelector("#invoice", { timeout: 15000 });
+    // Wait for the correct selector based on page loaded
+    const selector = isPublic ? "#invoice-sheet" : "#invoice";
+    await page.waitForSelector(selector, { timeout: 15000 });
 
     // Wait for all fonts to load
     await page.evaluateHandle(() => document.fonts.ready);
@@ -123,10 +129,6 @@ export async function GET(
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Retrieve invoice to verify auth membership
     const { data: invoice } = await supabase
       .from("invoices")
@@ -142,15 +144,29 @@ export async function GET(
       return NextResponse.json({ error: "Cannot generate PDF for a proposal status invoice" }, { status: 400 });
     }
 
-    // Check user membership inside the organization
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("organization_id")
-      .eq("id", user.id)
-      .single();
+    // Determine access:
+    // 1. If user is logged in, they must belong to the organization that owns the invoice.
+    // 2. If no user is logged in, we allow access only if the invoice status is draft, sent, active, paid, completed, or void.
+    let isAllowed = false;
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("organization_id")
+        .eq("id", user.id)
+        .single();
+      
+      if (profile && profile.organization_id === invoice.organization_id) {
+        isAllowed = true;
+      }
+    } else {
+      const allowedPublicStatuses = ["draft", "sent", "active", "paid", "completed", "void"];
+      if (allowedPublicStatuses.includes(invoice.status)) {
+        isAllowed = true;
+      }
+    }
 
-    if (!profile || profile.organization_id !== invoice.organization_id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!isAllowed) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const cookieHeader = request.headers.get("cookie") || "";
